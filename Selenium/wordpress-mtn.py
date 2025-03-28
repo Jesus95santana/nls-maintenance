@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 # Load environment variables
 load_dotenv()
 
-# Credentials and URL from .env
+# Credentials and URL from .env_old
 url = os.getenv('WP_ADMIN_URL')
 user = os.getenv('WP_ADMIN_USER')
 password = os.getenv('WP_ADMIN_PASS')
