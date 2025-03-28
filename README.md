@@ -13,7 +13,9 @@ pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-
 ### Credentials & Keys
 Once the repo is cloned make sure to have the following available
 - Clickup API Token (pk_XXXXXXXX)
-- Google API
+- Google API JSON Key (place this in Keys Directory)
+- Google Sheet ID (located in url of the google-sheet)
+
 ### Terminal Execution
 Begin by pasting the following
 ```bash
