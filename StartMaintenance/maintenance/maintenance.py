@@ -1,0 +1,2 @@
+def maintenance():
+    print("Maintenance!")
