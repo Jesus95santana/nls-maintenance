@@ -15,6 +15,8 @@ Once the repo is cloned make sure to have the following available
 - Clickup API Token (pk_XXXXXXXX)
 - Google API JSON Key (place this in Keys Directory)
 - Google Sheet ID (located in url of the google-sheet)
+  - Note: make sure Sheet is Sharable via link
+- Google Sheet Template name (A tab with a template for each new month created)
 
 ### Terminal Execution
 Begin by pasting the following

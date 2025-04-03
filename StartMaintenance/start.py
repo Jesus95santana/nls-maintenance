@@ -8,8 +8,8 @@ def start_maintenance():
     user_input = input("Choose the type of maintenance to work on: ").strip()
 
     if user_input == '1':
-        maintenance()
-    elif user_input == '2':
         nls_maintenance()
+    elif user_input == '2':
+        maintenance()
     else:
         print("Invalid input. Restarting...")
