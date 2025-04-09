@@ -1,41 +1,49 @@
-import os
-from dotenv import load_dotenv
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
+from datetime import datetime
+from GoogleTest.googleConnect import google_connect, SPREADSHEET_ID, TEMPLATE_SHEET_NAME
 
-# Set the path to your service account key file
-SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_KEY_PATH')
+service = google_connect()
 
-# Define the scopes
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-# Authenticate and construct service
-credentials = Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-service = build('sheets', 'v4', credentials=credentials)
+def get_sheet_id_by_name(sheet_name):
+    # Fetch the list of sheets in the spreadsheet
+    sheet_metadata = service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
+    sheets = sheet_metadata.get("sheets", "")
 
-# ID of the Google Sheet
-spreadsheet_id = os.getenv('GOOGLE_SHEET_ID')
+    # Search for the sheet ID based on the provided name
+    for sheet in sheets:
+        if sheet["properties"]["title"] == sheet_name:
+            return sheet["properties"]["sheetId"]
+    return None
 
-# Example of reading from the spreadsheet
-def read_sheet(range_name):
-    sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
-    values = result.get('values', [])
-    if not values:
-        print('No data found.')
+
+def clone_sheet(title, source_sheet_name):
+    source_sheet_id = get_sheet_id_by_name(source_sheet_name)
+    if source_sheet_id is None:
+        print(f"No sheet found with the name {source_sheet_name}")
+        return
+
+    # Clone the specified sheet to a new one with the specified title
+    body = {
+        "requests": [
+            {
+                "duplicateSheet": {
+                    "sourceSheetId": source_sheet_id,
+                    "newSheetName": title,
+                }
+            }
+        ]
+    }
+    response = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
+    print(f"Cloned sheet with title: {title}")
+
+
+def create_or_notify_sheet():
+    # Automatically generate the title as "Month Year"
+    title = datetime.now().strftime("%B %Y")  # e.g., "March 2025"
+
+    # Check if a sheet with this title already exists
+    if get_sheet_id_by_name(title):
+        print(f"Sheet already exists: {title}")
     else:
-        for row in values:
-            print(row)
-
-# Example of writing to the spreadsheet
-def write_sheet(range_name, values):
-    body = {'values': values}
-    result = service.spreadsheets().values().update(
-        spreadsheetId=spreadsheet_id, range=range_name,
-        valueInputOption='USER_ENTERED', body=body).execute()
-    print(f"{result.get('updatedCells')} cells updated.")
-
-# Usage
-# read_sheet('March 2025!A1:E10')
-# write_sheet('Sheet1!A12', [['Hello', 'World']])
+        # Clone a new sheet from the template since it doesn't exist
+        clone_sheet(title, TEMPLATE_SHEET_NAME)

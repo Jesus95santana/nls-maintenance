@@ -7,17 +7,25 @@ from googleapiclient.errors import HttpError
 load_dotenv()
 
 # Load environment variables
-SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_KEY_PATH')
-SPREADSHEET_ID = os.getenv('GOOGLE_SHEET_ID')
-SHEET_NAME = os.getenv('GOOGLE_SHEET_NAME', 'Sheet1')  # Default if not provided
+SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_KEY_PATH")
+SPREADSHEET_ID = os.getenv("GOOGLE_SHEET_ID")
+SHEET_NAME = os.getenv("GOOGLE_SHEET_NAME", "Sheet1")  # Default if not provided
+TEMPLATE_SHEET_NAME = os.getenv("GOOGLE_SHEET_TEMPLATE")  # This is the name of the tab to clone
 
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+
+def google_connect():
+    """Create and return a Google Sheets API service object."""
+    credentials = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    service = build("sheets", "v4", credentials=credentials)
+    return service
+
 
 def test_google_sheet_connection():
     try:
-        credentials = Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-        service = build('sheets', 'v4', credentials=credentials)
+        credentials = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+        service = build("sheets", "v4", credentials=credentials)
         sheet = service.spreadsheets()
 
         read_range = f"'{SHEET_NAME}'!A1"
@@ -25,15 +33,13 @@ def test_google_sheet_connection():
 
         # Try reading
         read_result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=read_range).execute()
-        values = read_result.get('values', [])
+        values = read_result.get("values", [])
         print("✅ Read test passed. Value at A1:", values[0][0] if values else "[empty]")
 
         # Try writing
         test_value = [["✅ Connection Successful"]]
-        body = {'values': test_value}
-        write_result = sheet.values().update(
-            spreadsheetId=SPREADSHEET_ID, range=write_range,
-            valueInputOption='USER_ENTERED', body=body).execute()
+        body = {"values": test_value}
+        write_result = sheet.values().update(spreadsheetId=SPREADSHEET_ID, range=write_range, valueInputOption="USER_ENTERED", body=body).execute()
         print(f"✅ Write test passed. {write_result.get('updatedCells')} cell(s) updated.")
     except HttpError as e:
         print("❌ Google Sheets API error:", e)
