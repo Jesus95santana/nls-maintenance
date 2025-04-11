@@ -103,3 +103,44 @@ def list_sites(list_id, assignee_ids):
             print(f"      - {task['name']} (Status: {task_status})")
     else:
         print("    No tasks found or failed to fetch tasks for List ID:", list_id)
+
+
+def return_fetch_all_tasks_by_folder(team_id):
+    print("Retrieving Clickup Data")
+    """
+    Fetches all tasks grouped by lists in each folder for a given team.
+    :param team_id: The ID of the team in ClickUp.
+    :return: List of all folders and their lists with tasks.
+    """
+    url = f"{CLICKUP_BASE_URL}/team/{team_id}/shared"
+    response = make_request(url)
+    all_folders_data = []
+    if response and "shared" in response and "folders" in response["shared"]:
+        folders = response["shared"]["folders"]
+        for folder in folders:
+            folder_data = {"name": folder["name"], "lists": []}
+            for lst in folder["lists"]:
+                list_data = {"name": lst["name"], "tasks": return_list_sites(lst["id"], [USER])}
+                folder_data["lists"].append(list_data)
+            all_folders_data.append(folder_data)
+    return all_folders_data
+
+
+def return_list_sites(list_id, assignee_ids):
+    """
+    Fetches tasks from a specific ClickUp list filtered by assignee IDs and statuses.
+    :param list_id: The ID of the list in ClickUp.
+    :param assignee_ids: List of assignee IDs to filter tasks.
+    :return: List of dictionaries, each representing a task.
+    """
+    status_filter = os.getenv("CLICKUP_STATUS_FILTER", "[]")
+    status_filter = eval(status_filter)  # Consider safety or alternatives like json.loads if possible
+    statuses = "&".join([f"statuses[]={status}" for status in status_filter])
+    assignees = "&".join([f"assignees[]={id}" for id in assignee_ids])
+    url = f"{CLICKUP_BASE_URL}/list/{list_id}/task?{assignees}&{statuses}"
+
+    response = make_request(url)
+    if response and "tasks" in response:
+        return [{"name": task["name"], "status": task.get("status", {}).get("status", "No status found")} for task in response["tasks"]]
+    else:
+        return []
