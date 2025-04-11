@@ -38,10 +38,15 @@ def make_request(url, method="get", data=None):
 def test_clickup_connection():
     """Check if connection to ClickUp is successful using the API token."""
     url = f"{CLICKUP_BASE_URL}/user"
+    url2 = f"{CLICKUP_BASE_URL}/team"
     response = make_request(url)
+    response2 = make_request(url2)
+    user_id = response["user"]["id"]
+    team_id = response2["teams"][0]["id"]
     if response:
         print("Connection confirmed. User data received successfully.")
-        print(response)
+        print("User ID is " + str(user_id))
+        print("Team ID is " + str(team_id))
     else:
         print("Failed to establish a connection. Check your API token and network settings.")
 
