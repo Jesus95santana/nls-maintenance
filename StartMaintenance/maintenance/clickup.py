@@ -6,6 +6,7 @@ load_dotenv()
 
 # Constants
 USER = os.getenv("CLICKUP_USER_ID")
+STATUS = os.getenv("CLICKUP_STATUS_FILTER")
 
 
 def fetch_shared_folders(team_id):
@@ -74,18 +75,30 @@ def fetch_all_tasks_by_folder(team_id):
 
 def list_sites(list_id, assignee_ids):
     """
-    Fetches tasks from a specific ClickUp list filtered by assignee IDs.
+    Fetches tasks from a specific ClickUp list filtered by assignee IDs and statuses.
     :param list_id: The ID of the list in ClickUp.
     :param assignee_ids: List of assignee IDs to filter tasks.
     :return: None
     """
+    # Load the CLICKUP_STATUS_FILTER from the environment and format it for the URL
+    status_filter = os.getenv("CLICKUP_STATUS_FILTER", "[]")
+    # Evaluating the string to a list
+    status_filter = eval(status_filter)
+    # Forming the status part of the URL
+    statuses = "&".join([f"statuses[]={status}" for status in status_filter])
+
+    # Forming the assignee part of the URL
     assignees = "&".join([f"assignees[]={id}" for id in assignee_ids])
-    url = f"{CLICKUP_BASE_URL}/list/{list_id}/task?{assignees}&statuses[]=due this month&statuses[]=send expiration notice&statuses[]=ready for report"  # Hardcoded to only show 3 status
+
+    # Constructing the URL with both statuses and assignees
+    url = f"{CLICKUP_BASE_URL}/list/{list_id}/task?{assignees}&{statuses}"
+
+    # Making the request to the ClickUp API
     response = make_request(url)
+
     if response and "tasks" in response:
-        # print(f"    Tasks for List ID {list_id}:")
+        # Output tasks with their names and statuses
         for task in response["tasks"]:
-            # Extract the status details
             task_status = task.get("status", {}).get("status", "No status found")
             print(f"      - {task['name']} (Status: {task_status})")
     else:
