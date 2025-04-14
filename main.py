@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from ClickupTest.clickupConnect import test_clickup_connection
 from GoogleTest.googleConnect import test_google_sheet_connection
 from StartMaintenance.nls_maintenance.nls_maintenance import nls_maintenance
-from StartMaintenance.maintenance.google import create_or_notify_sheet, google_list_formatter
+from StartMaintenance.maintenance.google import create_or_update_sheet, google_list_formatter
 from StartMaintenance.maintenance.clickup import fetch_shared_folders, fetch_all_tasks_by_folder, return_fetch_all_tasks_by_folder
 
 load_dotenv()
@@ -55,27 +55,36 @@ def main_menu():
             # Menu 2.1 Maintenance
             if user_input == "1":
                 # Menu 3
-                print("1: Create Sheet for Current Month Maintenance from Template")
+                print("1: Create/Update Google Sheet")
                 print("2: List Sites that are assigned")
                 print("3: Execute Maintenance")
                 print("4: Exit Program")
                 user_input = input("Choose the type of maintenance to work on: ").strip()
 
-                # Menu 3.1 Create New Spreadsheet
+                # Menu 3.1 Create/Update New Spreadsheet
                 if user_input == "1":
                     # Fetch all tasks from ClickUp
                     raw_data = return_fetch_all_tasks_by_folder(TEAM)
                     # Format the fetched data for Google Sheets
                     formatted_data = google_list_formatter(raw_data)
                     # Create or update the Google Sheet with formatted data
-                    create_or_notify_sheet(formatted_data)
+                    create_or_update_sheet(formatted_data)
 
                 # Menu 3.2 List All Sites + Status
                 elif user_input == "2":
                     fetch_all_tasks_by_folder(TEAM)
 
-                # Menu 3.3 Begin Maintenance
+                # Menu 3.3 List All Sites + Status
                 elif user_input == "3":
+                    # Fetch all tasks from ClickUp
+                    raw_data = return_fetch_all_tasks_by_folder(TEAM)
+                    # Format the fetched data for Google Sheets
+                    formatted_data = google_list_formatter(raw_data)
+                    # Update the Google Sheet with formatted data
+                    # create_or_notify_sheet(formatted_data)
+
+                # Menu 3.4 Begin Maintenance
+                elif user_input == "4":
                     print("Executing Maintenance")
                     fetch_shared_folders(TEAM)
                     # list_sites(TOMO360_MONTHLY, [USER])

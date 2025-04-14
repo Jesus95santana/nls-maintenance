@@ -1,5 +1,13 @@
+import os
+from dotenv import load_dotenv
 from datetime import datetime
+import json
 from GoogleTest.googleConnect import google_connect, SPREADSHEET_ID, TEMPLATE_SHEET_NAME
+
+load_dotenv()
+
+# Constants
+CLICKUP_STATUS = os.getenv("CLICKUP_STATUS_FILTER")
 
 service = google_connect()
 
@@ -37,7 +45,7 @@ def clone_sheet(title, source_sheet_name):
     print(f"Cloned sheet with title: {title}")
 
 
-def create_or_notify_sheet(data):
+def create_or_update_sheet(data):
     """
     Creates a new Google Sheet from a template if it does not exist for the current month,
     or updates it if it already exists.
@@ -67,8 +75,60 @@ def create_or_notify_sheet(data):
             .execute()
         )
         print(f"{result.get('updatedCells')} cells updated.")
+
+        # Assuming statuses are in the fourth column, the index is 3
+    if result.get("updatedCells") > 0:  # Check if the update was successful
+        print("Applying conditional formatting...")
+        color_formatting(sheet_id, 3, title)  # Apply formatting
     else:
         print("Failed to update sheet.")
+
+
+def color_formatting(sheet_id, status_column_index, sheet_title):
+    # Assuming `CLICKUP_STATUS` contains a JSON string of statuses
+    try:
+        status_list = json.loads(CLICKUP_STATUS)
+    except json.JSONDecodeError:
+        print("Failed to decode CLICKUP_STATUS_FILTER. Please check its format.")
+        return
+
+    # Defining colors for each status
+    status_colors = {
+        "Complete": {"red": 0.0, "green": 1.0, "blue": 0.0},  # Green
+        status_list[0]: {"red": 0.5, "green": 0.0, "blue": 0.5},  # Purple
+        status_list[1]: {"red": 1.0, "green": 1.0, "blue": 0.0},  # Yellow
+        status_list[2]: {"red": 0.0, "green": 0.0, "blue": 1.0},  # Blue
+    }
+
+    requests = []
+    for status, color in status_colors.items():
+        requests.append(
+            {
+                "addConditionalFormatRule": {
+                    "rule": {
+                        "ranges": [
+                            {
+                                "sheetId": sheet_id,
+                                "startRowIndex": 1,  # Assuming headers are in the first row
+                                "endRowIndex": 1000,  # Adjust as necessary
+                                "startColumnIndex": status_column_index,
+                                "endColumnIndex": status_column_index + 1,
+                            }
+                        ],
+                        "booleanRule": {
+                            "condition": {"type": "TEXT_EQ", "values": [{"userEnteredValue": status}]},
+                            "format": {"backgroundColor": color},
+                        },
+                    },
+                    "index": 0,  # Rule priority order
+                }
+            }
+        )
+
+    # Send batchUpdate to apply all formatting rules
+    body = {"requests": requests}
+    response = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
+    print(f"Conditional formatting applied: {response}")
 
 
 def google_list_formatter(raw_data):
