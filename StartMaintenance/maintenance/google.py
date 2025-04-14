@@ -46,12 +46,7 @@ def clone_sheet(title, source_sheet_name):
 
 
 def create_or_update_sheet(data):
-    """
-    Creates a new Google Sheet from a template if it does not exist for the current month,
-    or updates it if it already exists.
-    :param data: The data to be written to the Google Sheet.
-    """
-    title = datetime.now().strftime("%B %Y")  # Automatically generate the title as "Month Year"
+    title = datetime.now().strftime("%B %Y")
     sheet_id = get_sheet_id_by_name(title)
 
     if sheet_id is None:
@@ -60,28 +55,59 @@ def create_or_update_sheet(data):
     else:
         print(f"Sheet already exists: {title}")
 
-    print("Updating Sheet With Clickup Data")
-    new_sheet_id = get_sheet_id_by_name(title)
+    if not sheet_id:
+        print("Failed to create or retrieve the sheet ID.")
+        return
 
-    # Assuming sheet_id is correctly returned from the clone_sheet function
-    if new_sheet_id:
-        # print(data)
-        range_name = f"'{title}'!A1"  # Adjust if your data should start elsewhere
-        body = {"values": data}
-        result = (
-            service.spreadsheets()
-            .values()
-            .update(spreadsheetId=SPREADSHEET_ID, range=range_name, valueInputOption="USER_ENTERED", body=body)
-            .execute()
-        )
-        print(f"{result.get('updatedCells')} cells updated.")
+    range_name = f"{title}!A1:E{len(data)}"
 
-        # Assuming statuses are in the fourth column, the index is 3
-    if result.get("updatedCells") > 0:  # Check if the update was successful
-        print("Applying conditional formatting...")
-        color_formatting(sheet_id, 3, title)  # Apply formatting
+    changes = check_for_data_update(sheet_id, range_name, data)
+
+    if changes:
+        print("Data has changed. Here are the proposed changes:")
+        for row_index, old_row, new_row in changes:
+            print(f"Row {row_index + 1} changed from {old_row} to {new_row}")
+
+        confirm = input("Apply all changes? (y) yes / (n) no): ")
+        if confirm.lower() == "y":
+            for row_index, old_row, new_row in changes:
+                row_range = f"{title}!A{row_index + 1}:E{row_index + 1}"
+                body = {"values": [new_row]}
+                result = (
+                    service.spreadsheets()
+                    .values()
+                    .update(spreadsheetId=SPREADSHEET_ID, range=row_range, valueInputOption="USER_ENTERED", body=body)
+                    .execute()
+                )
+                print(f"Updated row {row_index + 1}")
+            print("All changes have been applied.")
+        else:
+            print("No changes have been applied.")
     else:
-        print("Failed to update sheet.")
+        print("No changes detected, no update necessary.")
+
+
+def check_for_data_update(sheet_id, range_name, new_data):
+    try:
+        result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range=range_name).execute()
+        existing_data = result.get("values", [])
+        changed_rows = []
+
+        # Determine the maximum number of columns to ensure all rows are the same length
+        max_columns = max(max((len(row) for row in existing_data), default=0), max((len(row) for row in new_data), default=0))
+
+        # Extend each row in existing and new data to max_columns
+        normalized_existing_data = [row + [""] * (max_columns - len(row)) for row in existing_data]
+        normalized_new_data = [row + [""] * (max_columns - len(row)) for row in new_data]
+
+        for index, (old_row, new_row) in enumerate(zip(normalized_existing_data, normalized_new_data)):
+            if old_row != new_row:
+                changed_rows.append((index, old_row, new_row))
+
+        return changed_rows
+    except Exception as e:
+        print(f"Failed to retrieve or compare data: {str(e)}")
+        return []  # Return an empty list indicating potential need for updating all data due to an error
 
 
 def color_formatting(sheet_id, status_column_index, sheet_title):
@@ -128,7 +154,7 @@ def color_formatting(sheet_id, status_column_index, sheet_title):
     # Send batchUpdate to apply all formatting rules
     body = {"requests": requests}
     response = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
-    print(f"Conditional formatting applied: {response}")
+    # print(f"Conditional formatting applied: {response}")
 
 
 def google_list_formatter(raw_data):
