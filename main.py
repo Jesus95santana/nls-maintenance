@@ -7,6 +7,7 @@ from GoogleTest.googleConnect import test_google_sheet_connection
 from StartMaintenance.nls_maintenance.nls_maintenance import nls_maintenance
 from StartMaintenance.maintenance.google import create_or_update_sheet, google_list_formatter
 from StartMaintenance.maintenance.clickup import fetch_shared_folders, fetch_all_tasks_by_folder, return_fetch_all_tasks_by_folder
+from StartMaintenance.maintenance.maintenance import maintenance
 
 load_dotenv()
 
@@ -74,20 +75,9 @@ def main_menu():
                 elif user_input == "2":
                     fetch_all_tasks_by_folder(TEAM)
 
-                # Menu 3.3 List All Sites + Status
+                # Menu 3.3 Executing Maintenance
                 elif user_input == "3":
-                    # Fetch all tasks from ClickUp
-                    raw_data = return_fetch_all_tasks_by_folder(TEAM)
-                    # Format the fetched data for Google Sheets
-                    formatted_data = google_list_formatter(raw_data)
-                    # Update the Google Sheet with formatted data
-                    # create_or_notify_sheet(formatted_data)
-
-                # Menu 3.4 Begin Maintenance
-                elif user_input == "4":
-                    print("Executing Maintenance")
-                    fetch_shared_folders(TEAM)
-                    # list_sites(TOMO360_MONTHLY, [USER])
+                    maintenance()
 
                 # Exit
                 elif user_input == "4":

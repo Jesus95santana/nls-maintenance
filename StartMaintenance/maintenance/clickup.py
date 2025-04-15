@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import json
 from ClickupTest.clickupConnect import make_request, CLICKUP_BASE_URL
 
 load_dotenv()
@@ -7,6 +8,16 @@ load_dotenv()
 # Constants
 USER = os.getenv("CLICKUP_USER_ID")
 STATUS = os.getenv("CLICKUP_STATUS_FILTER")
+TEAM = os.getenv("CLICKUP_TEAM_ID")
+
+
+#
+#
+#
+# Listing & Displaying
+#
+#
+#
 
 
 def fetch_shared_folders(team_id):
@@ -143,4 +154,94 @@ def return_list_sites(list_id, assignee_ids):
     if response and "tasks" in response:
         return [{"name": task["name"], "status": task.get("status", {}).get("status", "No status found")} for task in response["tasks"]]
     else:
+        return []
+
+
+#
+#
+#
+# Maintenance & Modifying
+#
+#
+#
+
+
+def hello_world(data):
+    if data == "ActivePlans":
+        print("Hello ActivePlans")
+
+    elif data == "RainCastle":
+        print("Hello RainCastle")
+
+    elif data == "Tomo360":
+        print("Hello Tomo360")
+
+
+def list_folders():
+    url = f"{CLICKUP_BASE_URL}/team/{TEAM}/shared"
+    response = make_request(url)  # Ensure make_request returns the API response
+
+    # Access the nested 'folders' key inside 'shared'
+    if response and "shared" in response and "folders" in response["shared"]:
+        folders = response["shared"]["folders"]
+        if folders:
+            print("\nAvailable folders:")
+            for index, folder in enumerate(folders):
+                print(f"{index + 1}. Folder: {folder['name']}")
+            return folders
+        else:
+            print("No folders found.")
+            return None
+    else:
+        print("No folders found or there was an error fetching folders.")
+        return None
+
+
+def list_lists(folder_id):
+    url = f"{CLICKUP_BASE_URL}/folder/{folder_id}/list"  # Make sure the endpoint is correct
+    response = make_request(url)
+
+    # You need to assign the response from make_request to a variable, typically 'response' is used
+    if response and "lists" in response:
+        lists = response["lists"]
+        if lists:
+            print("\nLists in the selected folder:")
+            for index, lst in enumerate(lists):  # Avoid using 'list' as it shadows a built-in
+                print(f"{index + 1}. List Name: {lst['name']}")
+            return lists
+        else:
+            print("No lists found.")
+            return None
+    else:
+        print("No lists found or there was an error fetching lists.")
+        return None
+
+
+def list_sites_maintenance(list_id, assignee_ids=[USER]):
+    """
+    Fetches tasks from a specific ClickUp list filtered by assignee IDs and statuses.
+    """
+    try:
+        status_filter = json.loads(os.getenv("CLICKUP_STATUS_FILTER", "[]"))
+    except json.JSONDecodeError:
+        print("Error decoding the CLICKUP_STATUS_FILTER. Please check its format.")
+        return []
+
+    statuses = "&".join(f"statuses[]={status}" for status in status_filter)
+    assignees = "&".join(f"assignees[]={id}" for id in assignee_ids)
+    url = f"{CLICKUP_BASE_URL}/list/{list_id}/task?{assignees}&{statuses}"
+
+    response = make_request(url)
+    if response and "tasks" in response:
+        tasks = response["tasks"]
+        if tasks:
+            print(f"Tasks in List ID {list_id}:")
+            for index, task in enumerate(tasks, start=1):  # Start numbering from 1
+                task_status = task.get("status", {}).get("status", "No status found")
+                print(f"{index}. {task['name']} (Status: {task_status})")
+        else:
+            print(f"No tasks found for List ID {list_id}.")
+        return tasks
+    else:
+        print(f"Failed to fetch tasks for List ID {list_id}.")
         return []
