@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 import json
+from datetime import datetime
 from ClickupTest.clickupConnect import make_request, CLICKUP_BASE_URL
 
 load_dotenv()
@@ -166,17 +167,6 @@ def return_list_sites(list_id, assignee_ids):
 #
 
 
-def hello_world(data):
-    if data == "ActivePlans":
-        print("Hello ActivePlans")
-
-    elif data == "RainCastle":
-        print("Hello RainCastle")
-
-    elif data == "Tomo360":
-        print("Hello Tomo360")
-
-
 def list_folders():
     url = f"{CLICKUP_BASE_URL}/team/{TEAM}/shared"
     response = make_request(url)  # Ensure make_request returns the API response
@@ -245,3 +235,80 @@ def list_sites_maintenance(list_id, assignee_ids=[USER]):
     else:
         print(f"Failed to fetch tasks for List ID {list_id}.")
         return []
+
+
+def get_task(task_id):
+    url = f"{CLICKUP_BASE_URL}/task/{task_id}"
+    try:
+        response = make_request(url)  # Ensure make_request returns the API response properly
+        if response:
+            # Directly return the response if it does not use a 'task' key
+            return response
+        else:
+            print(f"No response or invalid response received from API for Task ID {task_id}.")
+    except Exception as e:
+        print(f"An error occurred while fetching task: {e}")
+    return None
+
+
+def display_task_details(task):
+    fields_to_display = {
+        "1. Broken Links Report": "Broken Links Report",
+        "2. Date Completed": "Date Completed",
+        "3. Date for Email Subject Line (Month & Year)": "Date for Email Subject Line (Month & Year)",
+        "4. Website URL": "Website URL",
+        "5. WordPress Version": "WordPress Version",
+        "6. Notes for Maintenance": "Notes for Maintenance Report",
+        "7. Number of Plugins Updated": "Number of Plugins Updated",
+        "8. Domain Expiration": "Domain Expiration",
+    }
+
+    for key, field_name in fields_to_display.items():
+        value = get_custom_field_value(task, field_name)
+        print("{:<50} {}".format(key + ":", value))
+
+
+def format_date(timestamp):
+    """Convert Unix timestamp (in milliseconds) to a human-readable date."""
+    if timestamp is not None:
+        # Convert milliseconds to seconds
+        timestamp = int(timestamp) / 1000
+        return datetime.utcfromtimestamp(timestamp).strftime("%m/%d/%Y")
+    return "Not specified"
+
+
+def show_broken_links(task):
+    current_month = datetime.utcnow().month
+    current_year = datetime.utcnow().year
+    for field in task.get("custom_fields", []):
+        if field["name"] == "Broken Links Report":
+            attachments = field.get("value", [])
+            if not attachments:  # Check if the list is empty
+                return "Empty"
+            try:
+                # Assuming the most recent report is the first one
+                most_recent_report = attachments[0]
+                report_date_ms = int(most_recent_report["date"])
+                report_date = datetime.utcfromtimestamp(report_date_ms / 1000)
+                if report_date.year == current_year and report_date.month == current_month:
+                    return "Updated"
+                else:
+                    return "Not Updated"
+            except (KeyError, ValueError, IndexError):
+                return "not updated"  # Default to not updated if any errors occur
+    return "empty"  # If the field is not found
+
+
+def get_custom_field_value(task, field_name):
+    if field_name == "Broken Links Report":
+        return show_broken_links(task)
+    for field in task.get("custom_fields", []):
+        if field["name"] == field_name:
+            value = field.get("value", "Not specified")
+            if "Date" in field_name or "Expiration" in field_name:
+                try:
+                    return format_date(value)
+                except ValueError:
+                    return value
+            return value
+    return "No data"

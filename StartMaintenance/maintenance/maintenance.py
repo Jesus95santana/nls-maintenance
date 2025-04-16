@@ -6,7 +6,13 @@ import whois
 from urllib.parse import urlparse
 from datetime import datetime
 
-from StartMaintenance.maintenance.clickup import hello_world, list_folders, list_lists, list_sites_maintenance
+from StartMaintenance.maintenance.clickup import (
+    list_folders,
+    list_lists,
+    list_sites_maintenance,
+    get_task,
+    display_task_details,
+)
 
 
 def maintenance():
@@ -73,12 +79,15 @@ def maintenance():
 
                 selected_site = sites[int(site_input) - 1]
                 site_name = selected_site["name"]
+                site_id = selected_site["id"]
 
                 while True:
                     # === UPDATE MENU ===
+                    task = get_task(site_id)
                     print("\n🛠️ UPDATE MENU for " + site_name + ":")
-                    print("1: Plugins")
-                    print("2: Footer Year")
+
+                    display_task_details(task)
+
                     print("Type '.' to go back to Site Menu.")
                     print("Type 'exit' to return to Main Menu.")
 
@@ -90,11 +99,37 @@ def maintenance():
                         return
 
                     if update_input == "1":
-                        # plugins(site_name)
-                        print("Update Plugin!")
+                        print("broken_links: not built")
+                        # broken_links()
+
                     elif update_input == "2":
-                        print("Update Footer!")
-                        # footer_year(site_name)
+                        print("date_completed: not built")
+                        # date_completed()
+
+                    elif update_input == "3":
+                        print("date_email_subject_line: not built")
+                        # date_email_subject_line()
+
+                    elif update_input == "4":
+                        print("website_url: not built")
+                        # website_url()
+
+                    elif update_input == "5":
+                        print("wordpress_version: not built")
+                        # wordpress_version()
+
+                    elif update_input == "6":
+                        print("maintenance_notes: not built")
+                        # maintenance_notes()
+
+                    elif update_input == "7":
+                        print("update_plugins: not built")
+                        # update_plugins()
+
+                    elif update_input == "8":
+                        print("domain_exp: not built")
+                        # domain_exp()
+
                     else:
                         print("Invalid choice.")
 
@@ -207,44 +242,3 @@ def maintenance():
 #             exit("Exiting program...")
 #         else:
 #             print("Invalid option. Please try again.")
-
-
-# def navigation_menu(items, level):
-#     if not items:
-#         print("Nothing here to display.")
-#         return None
-#     while True:
-#         choice = input("\nEnter number to select, 'b' to start over, or 'q' to quit: ").strip()
-#         if choice.isdigit() and 1 <= int(choice) <= len(items):
-#             return items[int(choice) - 1]
-#         elif choice.lower() == "b" and level > 0:
-#             return None
-#         elif choice.lower() == "q":
-#             exit("Exiting program...")
-#         else:
-#             print("Invalid option, please try again.")
-
-
-# def main():
-#     # confirm_connection()
-#     while True:
-#         folders = fetch_folders(CLICKUP_SPACE_ID)
-#         folder_list = list_folders(folders)
-#         selected_folder = navigation_menu(folder_list, 0)
-#         if selected_folder:
-#             lists = fetch_lists(selected_folder["id"])
-#             list_list = list_lists(lists)
-#             selected_list = navigation_menu(list_list, 1)
-#             if selected_list:
-#                 tasks = fetch_tasks(selected_list["id"])
-#                 task_list = list_tasks(tasks)
-#                 selected_task = navigation_menu(task_list, 2)
-#                 if selected_task:
-#                     task_details = fetch_task_details(selected_task["id"])
-#                     custom_fields = display_custom_fields(task_details)
-#                     if custom_fields:
-#                         edit_custom_fields(custom_fields, task_details)
-
-
-# if __name__ == "__main__":
-#     main()
