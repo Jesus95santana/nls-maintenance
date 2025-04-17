@@ -28,7 +28,7 @@ def clone_sheet(title, source_sheet_name):
     source_sheet_id = get_sheet_id_by_name(source_sheet_name)
     if source_sheet_id is None:
         print(f"No sheet found with the name {source_sheet_name}")
-        return
+        return None
 
     # Clone the specified sheet to a new one with the specified title
     body = {
@@ -41,8 +41,14 @@ def clone_sheet(title, source_sheet_name):
             }
         ]
     }
-    response = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
-    print(f"Cloned sheet with title: {title}")
+    try:
+        response = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
+        new_sheet_id = response['replies'][0]['duplicateSheet']['properties']['sheetId']
+        print(f"Cloned sheet with title: {title}, Sheet ID: {new_sheet_id}")
+        return new_sheet_id
+    except Exception as e:
+        print(f"Failed to clone the sheet: {e}")
+        return None
 
 
 def create_or_update_sheet(data):
@@ -52,39 +58,48 @@ def create_or_update_sheet(data):
     if sheet_id is None:
         print(f"Sheet does not exist, creating new sheet: {title}")
         sheet_id = clone_sheet(title, TEMPLATE_SHEET_NAME)
+        if sheet_id is None:
+            print("Failed to create or retrieve the sheet ID.")
+            return
+        # Since the sheet is new, insert all data directly without checking for changes
+        range_name = f"{title}!A1:J{len(data)}"  # Ensure range covers all necessary columns and rows
+        body = {"values": data}
+        try:
+            result = service.spreadsheets().values().update(
+                spreadsheetId=SPREADSHEET_ID, range=range_name, valueInputOption="USER_ENTERED", body=body
+            ).execute()
+            print("New sheet populated with initial data.")
+            print("Applying conditional formatting...")
+            color_formatting(sheet_id, 3, title)  # Apply formatting
+        except Exception as e:
+            print(f"Failed to populate new sheet: {e}")
     else:
         print(f"Sheet already exists: {title}")
-
-    if not sheet_id:
-        print("Failed to create or retrieve the sheet ID.")
-        return
-
-    range_name = f"{title}!A1:E{len(data)}"
-
-    changes = check_for_data_update(sheet_id, range_name, data)
-
-    if changes:
-        print("Data has changed. Here are the proposed changes:")
-        for row_index, old_row, new_row in changes:
-            print(f"Row {row_index + 1} changed from {old_row} to {new_row}")
-
-        confirm = input("Apply all changes? (y) yes / (n) no): ")
-        if confirm.lower() == "y":
+        # Existing sheet logic to check and update changes
+        range_name = f"{title}!A1:J{len(data)}"  # Adjust range to fit data
+        changes = check_for_data_update(sheet_id, range_name, data)
+        if changes:
+            print("Data has changed. Here are the proposed changes:")
             for row_index, old_row, new_row in changes:
-                row_range = f"{title}!A{row_index + 1}:E{row_index + 1}"
-                body = {"values": [new_row]}
-                result = (
-                    service.spreadsheets()
-                    .values()
-                    .update(spreadsheetId=SPREADSHEET_ID, range=row_range, valueInputOption="USER_ENTERED", body=body)
-                    .execute()
-                )
-                print(f"Updated row {row_index + 1}")
-            print("All changes have been applied.")
+                print(f"Row {row_index + 1} changed from {old_row} to {new_row}")
+
+            confirm = input("Apply all changes? (y) yes / (n) no): ")
+            if confirm.lower() == "y":
+                for row_index, old_row, new_row in changes:
+                    row_range = f"{title}!A{row_index + 1}:J{row_index + 1}"
+                    body = {"values": [new_row]}
+                    service.spreadsheets().values().update(
+                        spreadsheetId=SPREADSHEET_ID, range=row_range, valueInputOption="USER_ENTERED", body=body
+                    ).execute()
+                    print(f"Updated row {row_index + 1}")
+                print("All changes have been applied.")
+                print("Applying conditional formatting...")
+                color_formatting(sheet_id, 3, title)  # Apply formatting
+
+            else:
+                print("No changes have been applied.")
         else:
-            print("No changes have been applied.")
-    else:
-        print("No changes detected, no update necessary.")
+            print("No changes detected, no update necessary.")
 
 
 def check_for_data_update(sheet_id, range_name, new_data):
@@ -165,7 +180,7 @@ def google_list_formatter(raw_data):
     :param raw_data: Nested list of dictionaries, detailing folders, their lists, and tasks.
     :return: List of lists, where each inner list is a row suitable for Google Sheets.
     """
-    formatted_data = [["Folder", "List", "Task Name", "Status"]]
+    formatted_data = [["Folder", "List", "Task Name", "Status", "Plugins Updated", "Footer 2025", "DNS Check", "Slider Rev Update", "Broken Links", "Notes"]]
 
     # Loop through each folder (e.g., Active Plans, Raincastle)
     for folder in raw_data:
@@ -175,12 +190,12 @@ def google_list_formatter(raw_data):
         # Loop through each list type within the folder (e.g., Monthly Clients, Quarterly Clients)
         for lst in folder["lists"]:
             list_name = lst["name"]
-            formatted_data.append(["", list_name, "", ""])  # List type row
+            formatted_data.append([folder_name, list_name, "", ""])  # List type row
 
             # Loop through each task within the list
             for task in lst["tasks"]:
                 task_name = task["name"]
                 status = task["status"]
-                formatted_data.append(["", "", task_name, status])  # Task detail row
+                formatted_data.append([folder_name, list_name, task_name, status])  # Task detail row
 
     return formatted_data
