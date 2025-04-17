@@ -4,6 +4,8 @@ import json
 from datetime import datetime
 from ClickupTest.clickupConnect import make_request, CLICKUP_BASE_URL
 
+from .google import update_google_sheet
+
 load_dotenv()
 
 # Constants
@@ -312,3 +314,63 @@ def get_custom_field_value(task, field_name):
                     return value
             return value
     return "No data"
+
+def get_field_id_by_name(task, field_name):
+    """
+    Retrieve the field ID for a given field name from the task's custom fields.
+
+    Parameters:
+        task (dict): The task object containing custom fields.
+        field_name (str): The name of the field to find the ID for.
+
+    Returns:
+        str: The field ID if found, None otherwise.
+    """
+    custom_fields = task.get('custom_fields', [])
+    for field in custom_fields:
+        if field['name'] == field_name:
+            return field['id']
+    return None
+
+def update_custom_field(task_id, field_id, value, value_type=None):
+    url = f"{CLICKUP_BASE_URL}/task/{task_id}/field/{field_id}"
+
+    if value_type == "plugin":
+        value = str(value)
+
+    elif value_type == "date":
+        try:
+            dt = datetime.strptime(value, "%Y-%m-%d")
+            value = int(dt.timestamp()) * 1000
+        except ValueError:
+            print("Invalid date format. Please use YYYY-MM-DD.")
+            return
+
+    payload = {"value": value}
+
+    response = make_request(url, "post", payload)
+    if response is not None:
+        print("Field updated successfully.")
+    else:
+        print("Failed to update field. Please try again later.")
+
+
+def update_plugins(site_name, task_id, field_id):
+    try:
+        total_updates = int(input("How many plugins need to be updated?: ").strip())
+        print("Proceed to update all of the plugins...")
+
+        failed_plugins = int(input("❌ How many plugins failed to update?: ").strip())
+        successful_updates = total_updates - failed_plugins
+
+        print("\n✅ Plugin Update Summary:")
+        print(f"- Total Plugins Intended for Update: {total_updates}")
+        print(f"- Successfully Updated Plugins: {successful_updates}")
+        print(f"- Failed Plugins: {failed_plugins}")
+
+        # Call the function to update Google Sheets
+        update_google_sheet(site_name, successful_updates, "Plugins Updated")
+        update_custom_field(task_id, field_id, successful_updates, "plugin")
+
+    except ValueError:
+        print("⚠️ Please enter valid numbers only.")

@@ -12,6 +12,8 @@ from StartMaintenance.maintenance.clickup import (
     list_sites_maintenance,
     get_task,
     display_task_details,
+    update_plugins,
+    get_field_id_by_name
 )
 
 
@@ -84,6 +86,7 @@ def maintenance():
                 while True:
                     # === UPDATE MENU ===
                     task = get_task(site_id)
+                    task_id = task['id']
                     print("\n🛠️ UPDATE MENU for " + site_name + ":")
 
                     display_task_details(task)
@@ -123,8 +126,8 @@ def maintenance():
                         # maintenance_notes()
 
                     elif update_input == "7":
-                        print("update_plugins: not built")
-                        # update_plugins()
+                        field_id = get_field_id_by_name(task, "Number of Plugins Updated")
+                        update_plugins(site_name, task_id, field_id)
 
                     elif update_input == "8":
                         print("domain_exp: not built")
@@ -170,25 +173,6 @@ def maintenance():
 #     else:
 #         print("No custom fields found for this task.")
 #         return None
-
-
-# def update_custom_field(task_id, field_id, value, value_type):
-#     url = f"{CLICKUP_BASE_URL}/task/{task_id}/field/{field_id}"
-#     payload = {"value": value}
-#     if value_type == "date":
-#         # Convert user input date in format 'YYYY-MM-DD' to Unix timestamp in milliseconds
-#         try:
-#             dt = datetime.strptime(value, "%Y-%m-%d")
-#             payload["value"] = int(dt.timestamp()) * 1000
-#         except ValueError:
-#             print("Invalid date format. Please use YYYY-MM-DD.")
-#             return
-
-#     response = make_request(url, "post", payload)
-#     if response is not None:  # Checking if response exists
-#         print("Field updated successfully.")
-#     else:
-#         print("Failed to update field. Please try again later.")
 
 
 # def edit_custom_fields(custom_fields, task):

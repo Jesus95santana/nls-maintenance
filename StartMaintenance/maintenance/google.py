@@ -50,7 +50,7 @@ def clone_sheet(title, source_sheet_name):
         print(f"Failed to clone the sheet: {e}")
         return None
 
-
+#
 def create_or_update_sheet(data):
     title = datetime.now().strftime("%B %Y")
     sheet_id = get_sheet_id_by_name(title)
@@ -199,3 +199,123 @@ def google_list_formatter(raw_data):
                 formatted_data.append([folder_name, list_name, task_name, status])  # Task detail row
 
     return formatted_data
+
+
+#
+#
+#
+# Maintenance & Modifying
+#
+#
+#
+
+def update_google_sheet(site_name, data, column_name):
+    service = google_connect()
+    title = datetime.now().strftime("%B %Y")
+    sheet_id = get_sheet_id_by_name(title)
+
+    if not sheet_id:
+        print(f"No sheet found for {title}. Please check the sheet name.")
+        return
+
+    range_name = f"{title}!A1:Z1000"
+    try:
+        result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range=range_name).execute()
+        values = result.get('values', [])
+
+        if not values:
+            print("The sheet is empty or the range is incorrect.")
+            return
+
+        if len(values[0]) < 3:
+            print("Header does not contain enough columns.")
+            return
+
+        header = values[0]
+        try:
+            column_index = header.index(column_name) + 1
+        except ValueError:
+            print(f"Column {column_name} not found.")
+            return
+
+        row_number = None
+        for i, row in enumerate(values, start=1):
+            if len(row) > 2 and row[2].strip().lower() == site_name.strip().lower():
+                row_number = i
+                break
+
+        if row_number is None:
+            print(f"Site name '{site_name}' not found in the sheet.")
+            return
+
+        cell_address = f"{get_column_letter(column_index)}{row_number}"
+        body = {
+            "values": [[data]],
+            "range": f"{title}!{cell_address}",
+            "majorDimension": "ROWS"
+        }
+        service.spreadsheets().values().update(
+            spreadsheetId=SPREADSHEET_ID, range=f"{title}!{cell_address}", valueInputOption="USER_ENTERED", body=body
+        ).execute()
+
+        # Apply color formatting based on the data
+        color = determine_background_color(data)
+        apply_background_color(SPREADSHEET_ID, cell_address, color)
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def get_column_letter(column_index):
+    """Converts an index to a column letter (e.g., 1 -> 'A', 2 -> 'B', ... 27 -> 'AA')."""
+    result = ""
+    while column_index > 0:
+        column_index, remainder = divmod(column_index - 1, 26)
+        result = chr(65 + remainder) + result
+    return result
+
+def determine_background_color(data):
+    # Your color determination logic here
+    return {"red": 0.0, "green": 1.0, "blue": 0.0}  # Example color setting
+
+def apply_background_color(spreadsheet_id, cell_address, color):
+    service = google_connect()
+    title = datetime.now().strftime("%B %Y")
+    sheet_id = get_sheet_id_by_name(title)
+    # Parse column letter and row number from cell_address
+    column_letter = ''.join(filter(str.isalpha, cell_address))
+    row_number = ''.join(filter(str.isdigit, cell_address))
+
+    if not sheet_id:
+        print(f"No sheet found with the title '{title}'.")
+        return
+
+    # Construct the request body for updating cell format
+    requests = [{
+        "repeatCell": {
+            "range": {
+                "sheetId": sheet_id,
+                "startRowIndex": int(row_number) - 1,  # Convert to zero-based index
+                "endRowIndex": int(row_number),
+                "startColumnIndex": column_to_index(column_letter) - 1,
+                "endColumnIndex": column_to_index(column_letter),
+            },
+            "cell": {
+                "userEnteredFormat": {
+                    "backgroundColor": color
+                }
+            },
+            "fields": "userEnteredFormat.backgroundColor"
+        }
+    }]
+
+    body = {
+        "requests": requests
+    }
+
+    # Send the request to the Sheets API
+    response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
+    print("Background color applied:", response)
+
+def column_to_index(column):
+    """Convert a column letter (e.g., 'A') into its corresponding index (e.g., 1)."""
+    return sum((ord(char) - 64) * (26 ** idx) for idx, char in enumerate(reversed(column.upper())))
