@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 import json
+import re
 from datetime import datetime
 from ClickupTest.clickupConnect import make_request, CLICKUP_BASE_URL
 
@@ -315,28 +316,24 @@ def get_custom_field_value(task, field_name):
             return value
     return "No data"
 
+
 def get_field_id_by_name(task, field_name):
-    """
-    Retrieve the field ID for a given field name from the task's custom fields.
-
-    Parameters:
-        task (dict): The task object containing custom fields.
-        field_name (str): The name of the field to find the ID for.
-
-    Returns:
-        str: The field ID if found, None otherwise.
-    """
-    custom_fields = task.get('custom_fields', [])
+    custom_fields = task.get("custom_fields", [])
     for field in custom_fields:
-        if field['name'] == field_name:
-            return field['id']
+        if field["name"] == field_name:
+            return field["id"]
     return None
+
 
 def update_custom_field(task_id, field_id, value, value_type=None):
     url = f"{CLICKUP_BASE_URL}/task/{task_id}/field/{field_id}"
 
     if value_type == "plugin":
+        print("Updating Plugin")
         value = str(value)
+
+    elif value_type == "footer":
+        print("Updating Footer Note")
 
     elif value_type == "date":
         try:
@@ -374,3 +371,22 @@ def update_plugins(site_name, task_id, field_id):
 
     except ValueError:
         print("⚠️ Please enter valid numbers only.")
+
+
+def maintenance_notes(site_name, task_id, field_id, text):
+    print("1. Update Footer Year")
+    print("2. Add Additional Note")
+    update_input = input("Which to update?").strip()
+
+    if update_input == "1":
+        current_year = datetime.now().year
+        # This regex pattern finds four consecutive digits that look like a year close to the current year
+        updated_text = re.sub(r"\b(20[2-4]\d)\b", str(current_year), text)
+        update_google_sheet(site_name, "Done", "Footer 2025")
+        update_custom_field(task_id, field_id, updated_text, "footer")
+
+    elif update_input == "2":
+        print("Add Aditional Notes: not built yet")
+        # broken_links()
+    else:
+        print("Not a valid choice.")

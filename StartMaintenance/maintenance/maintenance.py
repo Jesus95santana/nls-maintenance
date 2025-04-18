@@ -13,7 +13,9 @@ from StartMaintenance.maintenance.clickup import (
     get_task,
     display_task_details,
     update_plugins,
-    get_field_id_by_name
+    maintenance_notes,
+    get_field_id_by_name,
+    get_custom_field_value,
 )
 
 
@@ -86,7 +88,7 @@ def maintenance():
                 while True:
                     # === UPDATE MENU ===
                     task = get_task(site_id)
-                    task_id = task['id']
+                    task_id = task["id"]
                     print("\n🛠️ UPDATE MENU for " + site_name + ":")
 
                     display_task_details(task)
@@ -123,7 +125,9 @@ def maintenance():
 
                     elif update_input == "6":
                         print("maintenance_notes: not built")
-                        # maintenance_notes()
+                        text = get_custom_field_value(task, "Notes for Maintenance Report")
+                        field_id = get_field_id_by_name(task, "Notes for Maintenance Report")
+                        maintenance_notes(site_name, task_id, field_id, text)
 
                     elif update_input == "7":
                         field_id = get_field_id_by_name(task, "Number of Plugins Updated")

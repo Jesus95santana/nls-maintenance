@@ -43,12 +43,13 @@ def clone_sheet(title, source_sheet_name):
     }
     try:
         response = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
-        new_sheet_id = response['replies'][0]['duplicateSheet']['properties']['sheetId']
+        new_sheet_id = response["replies"][0]["duplicateSheet"]["properties"]["sheetId"]
         print(f"Cloned sheet with title: {title}, Sheet ID: {new_sheet_id}")
         return new_sheet_id
     except Exception as e:
         print(f"Failed to clone the sheet: {e}")
         return None
+
 
 #
 def create_or_update_sheet(data):
@@ -65,9 +66,12 @@ def create_or_update_sheet(data):
         range_name = f"{title}!A1:J{len(data)}"  # Ensure range covers all necessary columns and rows
         body = {"values": data}
         try:
-            result = service.spreadsheets().values().update(
-                spreadsheetId=SPREADSHEET_ID, range=range_name, valueInputOption="USER_ENTERED", body=body
-            ).execute()
+            result = (
+                service.spreadsheets()
+                .values()
+                .update(spreadsheetId=SPREADSHEET_ID, range=range_name, valueInputOption="USER_ENTERED", body=body)
+                .execute()
+            )
             print("New sheet populated with initial data.")
             print("Applying conditional formatting...")
             color_formatting(sheet_id, 3, title)  # Apply formatting
@@ -180,7 +184,9 @@ def google_list_formatter(raw_data):
     :param raw_data: Nested list of dictionaries, detailing folders, their lists, and tasks.
     :return: List of lists, where each inner list is a row suitable for Google Sheets.
     """
-    formatted_data = [["Folder", "List", "Task Name", "Status", "Plugins Updated", "Footer 2025", "DNS Check", "Slider Rev Update", "Broken Links", "Notes"]]
+    formatted_data = [
+        ["Folder", "List", "Task Name", "Status", "Plugins Updated", "Footer 2025", "DNS Check", "Slider Rev Update", "Broken Links", "Notes"]
+    ]
 
     # Loop through each folder (e.g., Active Plans, Raincastle)
     for folder in raw_data:
@@ -209,6 +215,7 @@ def google_list_formatter(raw_data):
 #
 #
 
+
 def update_google_sheet(site_name, data, column_name):
     service = google_connect()
     title = datetime.now().strftime("%B %Y")
@@ -221,7 +228,7 @@ def update_google_sheet(site_name, data, column_name):
     range_name = f"{title}!A1:Z1000"
     try:
         result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range=range_name).execute()
-        values = result.get('values', [])
+        values = result.get("values", [])
 
         if not values:
             print("The sheet is empty or the range is incorrect.")
@@ -249,11 +256,7 @@ def update_google_sheet(site_name, data, column_name):
             return
 
         cell_address = f"{get_column_letter(column_index)}{row_number}"
-        body = {
-            "values": [[data]],
-            "range": f"{title}!{cell_address}",
-            "majorDimension": "ROWS"
-        }
+        body = {"values": [[data]], "range": f"{title}!{cell_address}", "majorDimension": "ROWS"}
         service.spreadsheets().values().update(
             spreadsheetId=SPREADSHEET_ID, range=f"{title}!{cell_address}", valueInputOption="USER_ENTERED", body=body
         ).execute()
@@ -265,6 +268,7 @@ def update_google_sheet(site_name, data, column_name):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+
 def get_column_letter(column_index):
     """Converts an index to a column letter (e.g., 1 -> 'A', 2 -> 'B', ... 27 -> 'AA')."""
     result = ""
@@ -273,49 +277,48 @@ def get_column_letter(column_index):
         result = chr(65 + remainder) + result
     return result
 
+
 def determine_background_color(data):
     # Your color determination logic here
     return {"red": 0.0, "green": 1.0, "blue": 0.0}  # Example color setting
+
 
 def apply_background_color(spreadsheet_id, cell_address, color):
     service = google_connect()
     title = datetime.now().strftime("%B %Y")
     sheet_id = get_sheet_id_by_name(title)
     # Parse column letter and row number from cell_address
-    column_letter = ''.join(filter(str.isalpha, cell_address))
-    row_number = ''.join(filter(str.isdigit, cell_address))
+    column_letter = "".join(filter(str.isalpha, cell_address))
+    row_number = "".join(filter(str.isdigit, cell_address))
 
     if not sheet_id:
         print(f"No sheet found with the title '{title}'.")
         return
 
     # Construct the request body for updating cell format
-    requests = [{
-        "repeatCell": {
-            "range": {
-                "sheetId": sheet_id,
-                "startRowIndex": int(row_number) - 1,  # Convert to zero-based index
-                "endRowIndex": int(row_number),
-                "startColumnIndex": column_to_index(column_letter) - 1,
-                "endColumnIndex": column_to_index(column_letter),
-            },
-            "cell": {
-                "userEnteredFormat": {
-                    "backgroundColor": color
-                }
-            },
-            "fields": "userEnteredFormat.backgroundColor"
+    requests = [
+        {
+            "repeatCell": {
+                "range": {
+                    "sheetId": sheet_id,
+                    "startRowIndex": int(row_number) - 1,  # Convert to zero-based index
+                    "endRowIndex": int(row_number),
+                    "startColumnIndex": column_to_index(column_letter) - 1,
+                    "endColumnIndex": column_to_index(column_letter),
+                },
+                "cell": {"userEnteredFormat": {"backgroundColor": color}},
+                "fields": "userEnteredFormat.backgroundColor",
+            }
         }
-    }]
+    ]
 
-    body = {
-        "requests": requests
-    }
+    body = {"requests": requests}
 
     # Send the request to the Sheets API
     response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
     print("Background color applied:", response)
 
+
 def column_to_index(column):
     """Convert a column letter (e.g., 'A') into its corresponding index (e.g., 1)."""
-    return sum((ord(char) - 64) * (26 ** idx) for idx, char in enumerate(reversed(column.upper())))
+    return sum((ord(char) - 64) * (26**idx) for idx, char in enumerate(reversed(column.upper())))
