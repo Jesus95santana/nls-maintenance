@@ -124,7 +124,6 @@ def maintenance():
                         # wordpress_version()
 
                     elif update_input == "6":
-                        print("maintenance_notes: not built")
                         text = get_custom_field_value(task, "Notes for Maintenance Report")
                         field_id = get_field_id_by_name(task, "Notes for Maintenance Report")
                         maintenance_notes(site_name, task_id, field_id, text)

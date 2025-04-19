@@ -334,6 +334,14 @@ def update_custom_field(task_id, field_id, value, value_type=None):
 
     elif value_type == "footer":
         print("Updating Footer Note")
+        text, updated_text = value
+        year_pattern = r"\b(20[2-4]\d)\b"
+        if re.search(year_pattern, text):
+            # Replace the existing year
+            value = re.sub(year_pattern, str(datetime.now().year), text)
+        else:
+            # Append the updated year if no year is found
+            value = f"{text}\n{updated_text}"
 
     elif value_type == "date":
         try:
@@ -374,19 +382,26 @@ def update_plugins(site_name, task_id, field_id):
 
 
 def maintenance_notes(site_name, task_id, field_id, text):
-    print("1. Update Footer Year")
-    print("2. Add Additional Note")
+    print("1. Footer Year Updated")
+    print("2. Unable to Update Footer Year")
+    print("3. Add Additional Note")
     update_input = input("Which to update?").strip()
 
     if update_input == "1":
+        # Updated Copyright footer 2025
         current_year = datetime.now().year
         # This regex pattern finds four consecutive digits that look like a year close to the current year
-        updated_text = re.sub(r"\b(20[2-4]\d)\b", str(current_year), text)
+        updated_text = f"Updated Copyright footer {current_year}"
         update_google_sheet(site_name, "Done", "Footer 2025")
-        update_custom_field(task_id, field_id, updated_text, "footer")
+        texts = [text, updated_text]
+        update_custom_field(task_id, field_id, texts, "footer")
 
     elif update_input == "2":
+        update_google_sheet(site_name, None, "Footer 2025")
+
+    elif update_input == "3":
         print("Add Aditional Notes: not built yet")
         # broken_links()
+
     else:
         print("Not a valid choice.")

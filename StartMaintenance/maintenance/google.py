@@ -255,6 +255,9 @@ def update_google_sheet(site_name, data, column_name):
             print(f"Site name '{site_name}' not found in the sheet.")
             return
 
+        if not data:
+            data = "Incomplete"
+
         cell_address = f"{get_column_letter(column_index)}{row_number}"
         body = {"values": [[data]], "range": f"{title}!{cell_address}", "majorDimension": "ROWS"}
         service.spreadsheets().values().update(
@@ -279,8 +282,11 @@ def get_column_letter(column_index):
 
 
 def determine_background_color(data):
-    # Your color determination logic here
-    return {"red": 0.0, "green": 1.0, "blue": 0.0}  # Example color setting
+    if data == "Incomplete":
+        color = {"red": 1.0, "green": 0.0, "blue": 0.0}
+    else:
+        color = {"red": 0.0, "green": 1.0, "blue": 0.0}
+    return color
 
 
 def apply_background_color(spreadsheet_id, cell_address, color):
