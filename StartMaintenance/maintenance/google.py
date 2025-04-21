@@ -265,7 +265,7 @@ def update_google_sheet(site_name, data, column_name):
         ).execute()
 
         # Apply color formatting based on the data
-        color = determine_background_color(data)
+        color = determine_background_color(data, column_name)
         apply_background_color(SPREADSHEET_ID, cell_address, color)
 
     except Exception as e:
@@ -281,9 +281,11 @@ def get_column_letter(column_index):
     return result
 
 
-def determine_background_color(data):
+def determine_background_color(data, column_name):
     if data == "Incomplete":
         color = {"red": 1.0, "green": 0.0, "blue": 0.0}
+    elif data and column_name == "Notes":
+        color = {"red": 1.0, "green": 1.0, "blue": 0.0}
     else:
         color = {"red": 0.0, "green": 1.0, "blue": 0.0}
     return color

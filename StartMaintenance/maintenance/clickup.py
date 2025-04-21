@@ -343,6 +343,11 @@ def update_custom_field(task_id, field_id, value, value_type=None):
             # Append the updated year if no year is found
             value = f"{text}\n{updated_text}"
 
+    elif value_type == "note":
+        print("Adding Note to Clickup")
+        text, updated_text = value
+        value = f"{text}\n{updated_text}"
+
     elif value_type == "date":
         try:
             dt = datetime.strptime(value, "%Y-%m-%d")
@@ -385,10 +390,9 @@ def maintenance_notes(site_name, task_id, field_id, text):
     print("1. Footer Year Updated")
     print("2. Unable to Update Footer Year")
     print("3. Add Additional Note")
-    update_input = input("Which to update?").strip()
+    update_input = input("Which to update? ").strip()
 
     if update_input == "1":
-        # Updated Copyright footer 2025
         current_year = datetime.now().year
         # This regex pattern finds four consecutive digits that look like a year close to the current year
         updated_text = f"Updated Copyright footer {current_year}"
@@ -400,8 +404,10 @@ def maintenance_notes(site_name, task_id, field_id, text):
         update_google_sheet(site_name, None, "Footer 2025")
 
     elif update_input == "3":
-        print("Add Aditional Notes: not built yet")
-        # broken_links()
+        updated_text = input("Type your note to append to clickup: ").strip()
+        texts = [text, updated_text]
+        update_custom_field(task_id, field_id, texts, "note")
+        update_google_sheet(site_name, updated_text, "Notes")
 
     else:
         print("Not a valid choice.")
