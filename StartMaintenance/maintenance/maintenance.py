@@ -43,6 +43,7 @@ def maintenance():
             # === LIST MENU ===
             print("\n📋 LIST MENU:")
             print("Type '.' to go back to Folder Menu.")
+            print("Type 'r' to refresh folders.")
             print("Type 'exit' to return to Main Menu.")
             lists = list_lists(folder_id)
             if not lists:
@@ -52,6 +53,8 @@ def maintenance():
             list_input = input("Choose a list number: ").strip()
             if list_input == ".":
                 break
+            if folder_input == "refresh":
+                continue
             if list_input.lower() == "exit":
                 return
             if not list_input.isdigit() or int(list_input) not in range(1, len(lists) + 1):
@@ -65,6 +68,7 @@ def maintenance():
                 # === SITE MENU ===
                 print("\n🌐 SITE MENU:")
                 print("Type '.' to go back to List Menu.")
+                print("Type 'r' to refresh List Menu.")
                 print("Type 'exit' to return to Main Menu.")
                 sites = list_sites_maintenance(list_id)
                 if not sites:
@@ -75,6 +79,8 @@ def maintenance():
                 site_input = input("Choose a site number: ").strip()
                 if site_input == ".":
                     break
+                if folder_input == "refresh":
+                    continue
                 if site_input.lower() == "exit":
                     return
                 if not site_input.isdigit() or int(site_input) not in range(1, len(sites) + 1):
@@ -94,12 +100,15 @@ def maintenance():
                     display_task_details(task)
 
                     print("Type '.' to go back to Site Menu.")
+                    print("Type 'r' to refresh Site Menu.")
                     print("Type 'exit' to return to Main Menu.")
 
                     update_input = input("Enter your choice: ").strip()
 
                     if update_input == ".":
                         break
+                    if folder_input == "refresh":
+                        continue
                     if update_input.lower() == "exit":
                         return
 

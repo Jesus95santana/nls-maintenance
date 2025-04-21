@@ -339,6 +339,8 @@ def update_custom_field(task_id, field_id, value, value_type=None):
         if re.search(year_pattern, text):
             # Replace the existing year
             value = re.sub(year_pattern, str(datetime.now().year), text)
+        elif text == "Not specified":
+            value = f"{updated_text}"
         else:
             # Append the updated year if no year is found
             value = f"{text}\n{updated_text}"
