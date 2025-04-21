@@ -3,9 +3,12 @@ from dotenv import load_dotenv
 import json
 import re
 from datetime import datetime
+import requests
 from ClickupTest.clickupConnect import make_request, CLICKUP_BASE_URL
 
 from .google import update_google_sheet
+
+_latest_wp_version = None
 
 load_dotenv()
 
@@ -280,40 +283,112 @@ def format_date(timestamp):
     return "Not specified"
 
 
-def show_broken_links(task):
+def show_broken_links(task, passed, failed):
     current_month = datetime.utcnow().month
     current_year = datetime.utcnow().year
+
     for field in task.get("custom_fields", []):
         if field["name"] == "Broken Links Report":
             attachments = field.get("value", [])
-            if not attachments:  # Check if the list is empty
-                return "Empty"
+            if not attachments:
+                return "Empty"  # No prefix if nothing has been uploaded
+
             try:
-                # Assuming the most recent report is the first one
                 most_recent_report = attachments[0]
                 report_date_ms = int(most_recent_report["date"])
                 report_date = datetime.utcfromtimestamp(report_date_ms / 1000)
-                if report_date.year == current_year and report_date.month == current_month:
-                    return "Updated"
-                else:
-                    return "Not Updated"
+
+                prefix = passed if (report_date.year == current_year and report_date.month == current_month) else failed
+
+                return prefix + report_date.strftime("%m|%d|%Y")
             except (KeyError, ValueError, IndexError):
-                return "not updated"  # Default to not updated if any errors occur
-    return "empty"  # If the field is not found
+                return failed + "Invalid Report Format"
+
+    return failed + "Field Not Found"
 
 
-def get_custom_field_value(task, field_name):
+def get_latest_wp_version():
+    global _latest_wp_version
+    if _latest_wp_version:
+        return _latest_wp_version
+    try:
+        response = requests.get("https://api.wordpress.org/core/version-check/1.7/")
+        response.raise_for_status()
+        data = response.json()
+        _latest_wp_version = data["offers"][0]["current"]
+        return _latest_wp_version
+    except Exception as e:
+        return None
+
+
+def get_custom_field_value(task, field_name, debug=False):
+    passed = "✅ Updated | "
+    failed = "❌ Outdated | "
+
     if field_name == "Broken Links Report":
-        return show_broken_links(task)
+        return show_broken_links(task, passed, failed)
+
+    # Loop once through all custom fields
     for field in task.get("custom_fields", []):
-        if field["name"] == field_name:
-            value = field.get("value", "Not specified")
-            if "Date" in field_name or "Expiration" in field_name:
-                try:
-                    return format_date(value)
-                except ValueError:
-                    return value
-            return value
+        if field.get("name") != field_name:
+            continue
+
+        value = field.get("value", "Not specified")
+
+        # === Special Case: Date Completed ===
+        if field_name == "Date Completed":
+            if debug:
+                print("RAW Date Completed value:", value)
+
+            try:
+                # ClickUp provides timestamp in ms
+                timestamp = int(value) / 1000
+                completed_date = datetime.fromtimestamp(timestamp)
+                now = datetime.now()
+                is_this_month = completed_date.month == now.month and completed_date.year == now.year
+                prefix = passed if is_this_month else failed
+                return prefix + completed_date.strftime("%m|%d|%Y")
+            except Exception as e:
+                return f"⚠️ Invalid timestamp | {value}"
+
+        # === Special Case: Date for Email Subject Line (Month & Year) ===
+        if field_name == "Date for Email Subject Line (Month & Year)":
+            if debug:
+                print("RAW Date for Email Subject Line (Month & Year) value:", value)
+
+            try:
+                # Parse string like "February 2025"
+                field_date = datetime.strptime(value, "%B %Y")
+                now = datetime.now()
+                is_this_month = field_date.month == now.month and field_date.year == now.year
+                prefix = passed if is_this_month else failed
+                return prefix + value
+            except Exception as e:
+                return f"⚠️ Invalid format | {value}"
+
+        # === Special Case: WordPress Version ===
+        if field_name == "WordPress Version":
+            if debug:
+                print("RAW WordPress Version value:", value)
+
+            latest_version = get_latest_wp_version()
+            if latest_version:
+                is_current = value.strip() == latest_version.strip()
+                prefix = passed if is_current else failed
+                return prefix + value
+            else:
+                return f"⚠️ Could not fetch latest version | {value}"
+
+        # === Other Date-like fields (e.g. Expiration) ===
+        if "Date" in field_name or "Expiration" in field_name:
+            try:
+                return format_date(value)
+            except Exception:
+                return value
+
+        # === Default Return ===
+        return value
+
     return "No data"
 
 
