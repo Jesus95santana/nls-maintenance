@@ -4,6 +4,7 @@ import json
 import re
 from datetime import datetime
 import requests
+import whois
 from ClickupTest.clickupConnect import make_request, CLICKUP_BASE_URL
 
 from .google import update_google_sheet
@@ -271,16 +272,39 @@ def display_task_details(task):
 
     for key, field_name in fields_to_display.items():
         value = get_custom_field_value(task, field_name)
-        print("{:<50} {}".format(key + ":", value))
+
+        if key == "6. Notes for Maintenance":
+            print("{:<50} {}".format(key + ":", value))
+            analyze_notes_for_maintenance(task, value)  # Show subitems like 6.1, 6.2
+        else:
+            print("{:<50} {}".format(key + ":", value))
 
 
-def format_date(timestamp):
-    """Convert Unix timestamp (in milliseconds) to a human-readable date."""
-    if timestamp is not None:
-        # Convert milliseconds to seconds
-        timestamp = int(timestamp) / 1000
-        return datetime.utcfromtimestamp(timestamp).strftime("%m/%d/%Y")
-    return "Not specified"
+def analyze_notes_for_maintenance(task, notes_text):
+    current_year = str(datetime.now().year)
+    lines = notes_text.splitlines()
+    found_footer = False
+    slider_update_date = None
+
+    for line in lines:
+        if "footer" in line.lower() and current_year in line:
+            found_footer = True
+        if "slider" in line.lower():
+            match = re.search(r"(\d{2}/\d{2}/\d{4}|\d{4})", line)
+            if match:
+                slider_update_date = match.group(1)
+
+    print("{:<50} {}".format("      6.1 Footer updated this year:", "✅ Yes" if found_footer else "❌ No"))
+    print("{:<50} {}".format("      6.2 Slider Revolution updated:", f"✅ Yes ({slider_update_date})" if slider_update_date else "❌ No"))
+
+
+# def format_date(timestamp):
+#     """Convert Unix timestamp (in milliseconds) to a human-readable date."""
+#     if timestamp is not None:
+#         # Convert milliseconds to seconds
+#         timestamp = int(timestamp) / 1000
+#         return datetime.utcfromtimestamp(timestamp).strftime("%m/%d/%Y")
+#     return "Not specified"
 
 
 def show_broken_links(task, passed, failed):
@@ -319,6 +343,18 @@ def get_latest_wp_version():
         return _latest_wp_version
     except Exception as e:
         return None
+
+
+def get_dns_expiry(domain):
+    """Retrieve the domain expiration date using WHOIS."""
+    try:
+        domain_info = whois.whois(domain)
+        expiration_date = domain_info.expiration_date
+        if isinstance(expiration_date, list):
+            expiration_date = expiration_date[0]
+        return expiration_date
+    except Exception as e:
+        return None  # fail silently for now
 
 
 def get_custom_field_value(task, field_name, debug=False):
@@ -379,12 +415,39 @@ def get_custom_field_value(task, field_name, debug=False):
             else:
                 return f"⚠️ Could not fetch latest version | {value}"
 
-        # === Other Date-like fields (e.g. Expiration) ===
-        if "Date" in field_name or "Expiration" in field_name:
+        # === Special Case: Domain Expiration ===
+        if field_name == "Domain Expiration":
             try:
-                return format_date(value)
-            except Exception:
-                return value
+                # Convert ClickUp expiration timestamp (in ms) to datetime
+                clickup_exp = datetime.fromtimestamp(int(value) / 1000).date()
+
+                # Extract domain from Website URL field
+                domain = None
+                for f in task.get("custom_fields", []):
+                    if f["name"] == "Website URL":
+                        domain = f.get("value", "").replace("https://", "").replace("http://", "").strip("/")
+                        break
+
+                whois_exp = get_dns_expiry(domain).date() if domain else None
+
+                if not whois_exp:
+                    return failed + "WHOIS lookup failed"
+
+                if whois_exp != clickup_exp:
+                    return failed + f"WHOIS: {whois_exp.strftime('%m/%d/%Y')} ≠ ClickUp: {clickup_exp.strftime('%m/%d/%Y')}"
+
+                return passed + whois_exp.strftime("%m/%d/%Y")
+
+            except Exception as e:
+                return f"⚠️ Error comparing expiration: {e}"
+
+        # === Other Date-like fields (e.g. Expiration) ===
+
+        # if "Date" in field_name or "Expiration" in field_name:
+        #     try:
+        #         return format_date(value)
+        #     except Exception:
+        #         return value
 
         # === Default Return ===
         return value
@@ -410,15 +473,17 @@ def update_custom_field(task_id, field_id, value, value_type=None):
     elif value_type == "footer":
         print("Updating Footer Note")
         text, updated_text = value
-        year_pattern = r"\b(20[2-4]\d)\b"
-        if re.search(year_pattern, text):
-            # Replace the existing year
-            value = re.sub(year_pattern, str(datetime.now().year), text)
+        current_year = str(datetime.now().year)
+        footer_pattern = re.compile(r"(footer\s+)(20[2-4]\d)", re.IGNORECASE)
+
+        if footer_pattern.search(text):
+            # Replace only the footer year
+            value = footer_pattern.sub(rf"\1{current_year}", text)
         elif text == "Not specified":
             value = f"{updated_text}"
         else:
             # Append the updated year if no year is found
-            value = f"{text}\n{updated_text}"
+            value = f"{text}{updated_text}"
 
     elif value_type == "note":
         print("Adding Note to Clickup")
