@@ -553,3 +553,10 @@ def maintenance_notes(site_name, task_id, field_id, text):
 
     else:
         print("Not a valid choice.")
+
+
+def date_completed(task_id, field_id):
+    print("Updating Date Completed Field")
+    today = datetime.now()
+    timestamp = int(today.timestamp() * 1000)  # Convert to milliseconds
+    update_custom_field(task_id, field_id, timestamp)
