@@ -282,20 +282,19 @@ def display_task_details(task):
 
 def analyze_notes_for_maintenance(task, notes_text):
     current_year = str(datetime.now().year)
+    current_month = str(datetime.now().month)
     lines = notes_text.splitlines()
     found_footer = False
-    slider_update_date = None
+    found_slider = False
 
     for line in lines:
         if "footer" in line.lower() and current_year in line:
             found_footer = True
-        if "slider" in line.lower():
-            match = re.search(r"(\d{2}/\d{2}/\d{4}|\d{4})", line)
-            if match:
-                slider_update_date = match.group(1)
+        if "slider" in line.lower() and current_month in line:
+            found_slider = True
 
     print("{:<50} {}".format("      6.1 Footer updated this year:", "✅ Yes" if found_footer else "❌ No"))
-    print("{:<50} {}".format("      6.2 Slider Revolution updated:", f"✅ Yes ({slider_update_date})" if slider_update_date else "❌ No"))
+    print("{:<50} {}".format("      6.2 Slider Revolution updated:", "✅ Yes " if found_slider else "❌ No"))
 
 
 # def format_date(timestamp):
@@ -469,7 +468,22 @@ def update_custom_field(task_id, field_id, value, value_type=None):
 
         if footer_pattern.search(text):
             # Replace only the footer year
-            value = footer_pattern.sub(rf"\1{current_year}", text)
+            value = footer_pattern.sub(lambda m: f"{m.group(1)}{current_year}", text)
+        elif text == "Not specified":
+            value = f"{updated_text}"
+        else:
+            # Append the updated year if no year is found
+            value = f"{text}{updated_text}"
+
+    elif value_type == "slider":
+        print("Updating Slider Note")
+        text, updated_text = value
+        current_date = str(datetime.now().strftime("%m/%d/%y"))
+        slider_pattern = re.compile(r"(revolution\s+)(\d{2}/\d{2}/\d{2})", re.IGNORECASE)
+
+        if slider_pattern.search(text):
+            # Replace only the slider date
+            value = slider_pattern.sub(lambda m: f"{m.group(1)}{current_date}", text)
         elif text == "Not specified":
             value = f"{updated_text}"
         else:
@@ -479,7 +493,7 @@ def update_custom_field(task_id, field_id, value, value_type=None):
     elif value_type == "note":
         print("Adding Note to Clickup")
         text, updated_text = value
-        value = f"{text}\n{updated_text}"
+        value = f"{text}{updated_text}"
 
     elif value_type == "date":
         try:
@@ -520,30 +534,46 @@ def update_plugins(site_name, task_id, field_id):
 
 
 def maintenance_notes(site_name, task_id, field_id, text):
-    print("1. Footer Year Updated")
-    print("2. Unable to Update Footer Year")
-    print("3. Add Additional Note")
-    update_input = input("Which to update? ").strip()
+    while True:
+        print("1. Unable to Update Footer Year")
+        print("2. Add Additional Note")
+        print("Type '.' to go back.")
+        update_input = input("Which to update? ").strip()
 
-    if update_input == "1":
-        current_year = datetime.now().year
-        # This regex pattern finds four consecutive digits that look like a year close to the current year
-        updated_text = f"Updated Copyright footer {current_year}"
-        update_google_sheet(site_name, "Done", "Footer 2025")
-        texts = [text, updated_text]
-        update_custom_field(task_id, field_id, texts, "footer")
+        if update_input == ".":
+            break
 
-    elif update_input == "2":
-        update_google_sheet(site_name, None, "Footer 2025")
+        if update_input == "1":
+            update_google_sheet(site_name, None, "Footer 2025")
+            break
 
-    elif update_input == "3":
-        updated_text = input("Type your note to append to clickup: ").strip()
-        texts = [text, updated_text]
-        update_custom_field(task_id, field_id, texts, "note")
-        update_google_sheet(site_name, updated_text, "Notes")
+        elif update_input == "2":
+            updated_text = input("Type your note to append to clickup: ").strip()
+            texts = [text, updated_text]
+            update_custom_field(task_id, field_id, texts, "note")
+            update_google_sheet(site_name, updated_text, "Notes")
+            break
 
-    else:
-        print("Not a valid choice.")
+        else:
+            print("Not a valid choice.")
+
+
+def update_footer(site_name, task_id, field_id, text):
+    print("Updating Footer Note")
+    current_year = datetime.now().year
+    updated_text = f"Updated Copyright footer {current_year}"
+    update_google_sheet(site_name, "Done", "Footer 2025")
+    texts = [text, updated_text]
+    update_custom_field(task_id, field_id, texts, "footer")
+
+
+def update_slider(site_name, task_id, field_id, text):
+    print("Updating Slider Note")
+    current_date = datetime.now().strftime("%m/%d/%y")
+    updated_text = f"Updated Slider Revolution {current_date}"
+    update_google_sheet(site_name, "Done", "Slider Rev Update")
+    texts = [text, updated_text]
+    update_custom_field(task_id, field_id, texts, "slider")
 
 
 def date_completed(task_id, field_id):

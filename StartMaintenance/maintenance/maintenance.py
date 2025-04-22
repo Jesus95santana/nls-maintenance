@@ -17,6 +17,8 @@ from StartMaintenance.maintenance.clickup import (
     date_completed,
     wordpress_version,
     domain_exp,
+    update_footer,
+    update_slider,
     date_email_subject_line,
     get_field_id_by_name,
     get_custom_field_value,
@@ -142,6 +144,16 @@ def maintenance():
                         text = get_custom_field_value(task, "Notes for Maintenance Report")
                         field_id = get_field_id_by_name(task, "Notes for Maintenance Report")
                         maintenance_notes(site_name, task_id, field_id, text)
+
+                    elif update_input == "6.1":
+                        text = get_custom_field_value(task, "Notes for Maintenance Report")
+                        field_id = get_field_id_by_name(task, "Notes for Maintenance Report")
+                        update_footer(site_name, task_id, field_id, text)
+
+                    elif update_input == "6.2":
+                        text = get_custom_field_value(task, "Notes for Maintenance Report")
+                        field_id = get_field_id_by_name(task, "Notes for Maintenance Report")
+                        update_slider(site_name, task_id, field_id, text)
 
                     elif update_input == "7":
                         field_id = get_field_id_by_name(task, "Number of Plugins Updated")
