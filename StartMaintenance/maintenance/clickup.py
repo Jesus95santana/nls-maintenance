@@ -441,15 +441,6 @@ def get_custom_field_value(task, field_name, debug=False):
             except Exception as e:
                 return f"⚠️ Error comparing expiration: {e}"
 
-        # === Other Date-like fields (e.g. Expiration) ===
-
-        # if "Date" in field_name or "Expiration" in field_name:
-        #     try:
-        #         return format_date(value)
-        #     except Exception:
-        #         return value
-
-        # === Default Return ===
         return value
 
     return "No data"
@@ -566,4 +557,11 @@ def date_email_subject_line(task_id, field_id):
     print("Updating Date for Email Subject Field")
     today = datetime.now()
     value = today.strftime("%B %Y")  # Output will be like "April 2025"
+    update_custom_field(task_id, field_id, value)
+
+
+def wordpress_version(task_id, field_id):
+    print("Updating WordPress Version Field")
+    latest_version = get_latest_wp_version()
+    value = latest_version.strip()
     update_custom_field(task_id, field_id, value)

@@ -15,6 +15,7 @@ from StartMaintenance.maintenance.clickup import (
     update_plugins,
     maintenance_notes,
     date_completed,
+    wordpress_version,
     date_email_subject_line,
     get_field_id_by_name,
     get_custom_field_value,
@@ -133,8 +134,8 @@ def maintenance():
                         # website_url()
 
                     elif update_input == "5":
-                        print("wordpress_version: not built")
-                        # wordpress_version()
+                        field_id = get_field_id_by_name(task, "WordPress Version")
+                        wordpress_version(task_id, field_id)
 
                     elif update_input == "6":
                         text = get_custom_field_value(task, "Notes for Maintenance Report")
