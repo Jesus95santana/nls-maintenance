@@ -565,3 +565,30 @@ def wordpress_version(task_id, field_id):
     latest_version = get_latest_wp_version()
     value = latest_version.strip()
     update_custom_field(task_id, field_id, value)
+
+
+def domain_exp(task, task_id, field_id):
+    print("Updating Domain Expiration Field")
+    # Extract domain from Website URL field
+    domain = None
+    for f in task.get("custom_fields", []):
+        if f["name"] == "Website URL":
+            domain = f.get("value", "").replace("https://", "").replace("http://", "").strip("/")
+            break
+    if not domain:
+        print("Domain not found.")
+        return
+
+    whois_exp = get_dns_expiry(domain)  # Assume this returns a datetime or date
+
+    if not whois_exp:
+        print("Could not retrieve WHOIS expiration date.")
+        return
+
+    if isinstance(whois_exp, datetime):
+        dt = whois_exp
+    else:
+        # Convert date to datetime at midnight
+        dt = datetime.combine(whois_exp, datetime.min.time())
+    timestamp = int(dt.timestamp() * 1000)  # Convert to milliseconds
+    update_custom_field(task_id, field_id, timestamp)

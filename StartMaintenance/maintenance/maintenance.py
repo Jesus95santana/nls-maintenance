@@ -16,6 +16,7 @@ from StartMaintenance.maintenance.clickup import (
     maintenance_notes,
     date_completed,
     wordpress_version,
+    domain_exp,
     date_email_subject_line,
     get_field_id_by_name,
     get_custom_field_value,
@@ -147,8 +148,8 @@ def maintenance():
                         update_plugins(site_name, task_id, field_id)
 
                     elif update_input == "8":
-                        print("domain_exp: not built")
-                        # domain_exp()
+                        field_id = get_field_id_by_name(task, "Domain Expiration")
+                        domain_exp(task, task_id, field_id)
 
                     else:
                         print("Invalid choice.")
