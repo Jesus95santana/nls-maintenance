@@ -560,3 +560,10 @@ def date_completed(task_id, field_id):
     today = datetime.now()
     timestamp = int(today.timestamp() * 1000)  # Convert to milliseconds
     update_custom_field(task_id, field_id, timestamp)
+
+
+def date_email_subject_line(task_id, field_id):
+    print("Updating Date for Email Subject Field")
+    today = datetime.now()
+    value = today.strftime("%B %Y")  # Output will be like "April 2025"
+    update_custom_field(task_id, field_id, value)

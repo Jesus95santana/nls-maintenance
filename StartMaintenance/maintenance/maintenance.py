@@ -15,6 +15,7 @@ from StartMaintenance.maintenance.clickup import (
     update_plugins,
     maintenance_notes,
     date_completed,
+    date_email_subject_line,
     get_field_id_by_name,
     get_custom_field_value,
 )
@@ -124,8 +125,8 @@ def maintenance():
                         date_completed(task_id, field_id)
 
                     elif update_input == "3":
-                        print("date_email_subject_line: not built")
-                        # date_email_subject_line()
+                        field_id = get_field_id_by_name(task, "Date for Email Subject Line (Month & Year)")
+                        date_email_subject_line(task_id, field_id)
 
                     elif update_input == "4":
                         print("website_url: not built")
