@@ -282,13 +282,26 @@ def get_column_letter(column_index):
 
 
 def determine_background_color(data, column_name):
-    if data == "Incomplete":
-        color = {"red": 1.0, "green": 0.0, "blue": 0.0}
-    elif data and column_name == "Notes":
-        color = {"red": 1.0, "green": 1.0, "blue": 0.0}
+    if not isinstance(data, str):
+        data = str(data)  # Ensure we are working with a string
+
+    lowered = data.strip().lower()
+
+    if lowered == "incomplete":
+        # Light Red
+        return {"red": 1.0, "green": 0.6, "blue": 0.6}
+    elif lowered == "n/a" or lowered == "0":
+        # Light Blue
+        return {"red": 0.7, "green": 0.85, "blue": 1.0}
+    elif "done" in lowered:
+        # Green
+        return {"red": 0.0, "green": 1.0, "blue": 0.0}
+    elif lowered.isdigit():
+        # Numeric, treat as success (green)
+        return {"red": 0.0, "green": 1.0, "blue": 0.0}
     else:
-        color = {"red": 0.0, "green": 1.0, "blue": 0.0}
-    return color
+        # Default to red (for unknown but non-critical values)
+        return {"red": 1.0, "green": 0.0, "blue": 0.0}
 
 
 def apply_background_color(spreadsheet_id, cell_address, color):

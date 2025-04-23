@@ -14,6 +14,7 @@ from StartMaintenance.maintenance.clickup import (
     display_task_details,
     update_plugins,
     maintenance_notes,
+    clickup_sync_google,
     date_completed,
     wordpress_version,
     domain_exp,
@@ -106,6 +107,7 @@ def maintenance():
                     print("\n🛠️ UPDATE MENU for " + site_name + ":")
 
                     display_task_details(task)
+                    print("9. Updage Google Sheet Status")
 
                     print("Type '.' to go back to Site Menu.")
                     print("Type 'r' to refresh Site Menu.")
@@ -161,7 +163,12 @@ def maintenance():
 
                     elif update_input == "8":
                         field_id = get_field_id_by_name(task, "Domain Expiration")
-                        domain_exp(task, task_id, field_id)
+                        domain_exp(site_name, task, task_id, field_id)
+
+                    elif update_input == "9":
+                        print("Syncing status to Google Sheets...")
+                        clickup_sync_google(site_name, task)
+                        print("Sync completed!")
 
                     else:
                         print("Invalid choice.")

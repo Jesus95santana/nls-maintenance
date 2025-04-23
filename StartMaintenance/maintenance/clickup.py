@@ -282,19 +282,33 @@ def display_task_details(task):
 
 def analyze_notes_for_maintenance(task, notes_text):
     current_year = str(datetime.now().year)
-    current_month = str(datetime.now().month)
+    current_month = str(datetime.now().month).zfill(2)  # Ensure "04" instead of "4"
+
     lines = notes_text.splitlines()
-    found_footer = False
-    found_slider = False
+    footer_status = "Empty"
+    slider_status = "Empty"
 
     for line in lines:
-        if "footer" in line.lower() and current_year in line:
-            found_footer = True
-        if "slider" in line.lower() and current_month in line:
-            found_slider = True
+        lower_line = line.lower()
 
-    print("{:<50} {}".format("      6.1 Footer updated this year:", "✅ Yes" if found_footer else "❌ No"))
-    print("{:<50} {}".format("      6.2 Slider Revolution updated:", "✅ Yes " if found_slider else "❌ No"))
+        # === Footer Check ===
+        if "footer" in lower_line:
+            if current_year in line:
+                footer_status = "✅ Updated"
+            else:
+                footer_status = "❌ Outdated"
+
+        # === Slider Check ===
+        if "slider" in lower_line:
+            if current_month in line:
+                slider_status = "✅ Updated"
+            else:
+                slider_status = "❌ Outdated"
+
+    print("{:<50} {}".format("      6.1 Footer updated this year:", footer_status))
+    print("{:<50} {}".format("      6.2 Slider Revolution updated:", slider_status))
+    note_values = [footer_status, slider_status]
+    return note_values
 
 
 # def format_date(timestamp):
@@ -597,7 +611,7 @@ def wordpress_version(task_id, field_id):
     update_custom_field(task_id, field_id, value)
 
 
-def domain_exp(task, task_id, field_id):
+def domain_exp(site_name, task, task_id, field_id):
     print("Updating Domain Expiration Field")
     # Extract domain from Website URL field
     domain = None
@@ -620,5 +634,58 @@ def domain_exp(task, task_id, field_id):
     else:
         # Convert date to datetime at midnight
         dt = datetime.combine(whois_exp, datetime.min.time())
+    update_google_sheet(site_name, "Done", "Slider Rev Update")
     timestamp = int(dt.timestamp() * 1000)  # Convert to milliseconds
     update_custom_field(task_id, field_id, timestamp)
+
+
+def filter_clickup_values(clickup_values):
+    filtered_values = []
+
+    for value in clickup_values:
+        if isinstance(value, str):
+            lowered = value.lower()
+            if "updated" in lowered:
+                filtered_values.append("Done")
+            elif "empty" in lowered:
+                filtered_values.append("N/A")
+            elif "outdated" in lowered or "no data" in lowered:
+                filtered_values.append("Incomplete")
+            else:
+                filtered_values.append(value)
+        elif value is None:
+            filtered_values.append("Incomplete")
+        else:
+            filtered_values.append(value)
+
+    return filtered_values
+
+
+def clickup_sync_google(site_name, task):
+    # Define only the fields you want to fetch and display
+    fields_to_display = {
+        "1. Broken Links Report": "Broken Links Report",
+        "2. Number of Plugins Updated": "Number of Plugins Updated",
+        "3. Domain Expiration": "Domain Expiration",
+        "Notes for Maintenance": "Notes for Maintenance Report",
+    }
+    clickup_values = []
+
+    for key, field_name in fields_to_display.items():
+        value = get_custom_field_value(task, field_name)
+        if key == "Notes for Maintenance":
+            note_values = analyze_notes_for_maintenance(task, value)  # Show subitems like 6.1, 6.2
+            footer_value, slider_value = note_values
+            clickup_values.append(footer_value)
+            clickup_values.append(slider_value)
+        else:
+            clickup_values.append(value)
+
+    # 🔍 Apply filtering logic
+    filtered_values = filter_clickup_values(clickup_values)
+
+    update_google_sheet(site_name, filtered_values[0], "Broken Links")
+    update_google_sheet(site_name, filtered_values[1], "Plugins Updated")
+    update_google_sheet(site_name, filtered_values[2], "DNS Check")
+    update_google_sheet(site_name, filtered_values[3], "Footer 2025")
+    update_google_sheet(site_name, filtered_values[4], "Slider Rev Update")
