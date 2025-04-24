@@ -139,10 +139,10 @@ def color_formatting(sheet_id, status_column_index, sheet_title):
 
     # Defining colors for each status
     status_colors = {
-        "Complete": {"red": 0.0, "green": 1.0, "blue": 0.0},  # Green
-        status_list[0]: {"red": 0.5, "green": 0.0, "blue": 0.5},  # Purple
-        status_list[1]: {"red": 1.0, "green": 1.0, "blue": 0.0},  # Yellow
-        status_list[2]: {"red": 0.0, "green": 0.0, "blue": 1.0},  # Blue
+        "complete": {"red": 0.0, "green": 1.0, "blue": 0.0},  # Green
+        status_list[1]: {"red": 0.0, "green": 0.0, "blue": 1.0},  # Blue
+        status_list[2]: {"red": 0.5, "green": 0.0, "blue": 0.5},  # Purple
+        status_list[3]: {"red": 1.0, "green": 1.0, "blue": 0.0},  # Yellow
     }
 
     requests = []

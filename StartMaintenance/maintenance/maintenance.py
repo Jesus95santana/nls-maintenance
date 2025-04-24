@@ -20,6 +20,7 @@ from StartMaintenance.maintenance.clickup import (
     domain_exp,
     update_footer,
     update_slider,
+    change_clickup_status,
     date_email_subject_line,
     get_field_id_by_name,
     get_custom_field_value,
@@ -108,10 +109,12 @@ def maintenance():
 
                     display_task_details(task)
                     print("9. Updage Google Sheet Status")
-
+                    print("0. Change Clickup Status")
+                    print("==================================")
                     print("Type '.' to go back to Site Menu.")
                     print("Type 'r' to refresh Site Menu.")
                     print("Type 'exit' to return to Main Menu.")
+                    print("==================================")
 
                     update_input = input("Enter your choice: ").strip()
 
@@ -169,6 +172,9 @@ def maintenance():
                         print("Syncing status to Google Sheets...")
                         clickup_sync_google(site_name, task)
                         print("Sync completed!")
+
+                    elif update_input == "0":
+                        change_clickup_status(site_name, task_id)
 
                     else:
                         print("Invalid choice.")

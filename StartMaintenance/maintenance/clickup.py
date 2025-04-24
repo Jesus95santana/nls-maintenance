@@ -689,3 +689,23 @@ def clickup_sync_google(site_name, task):
     update_google_sheet(site_name, filtered_values[2], "DNS Check")
     update_google_sheet(site_name, filtered_values[3], "Footer 2025")
     update_google_sheet(site_name, filtered_values[4], "Slider Rev Update")
+
+
+def change_clickup_status(site_name, task_id):
+    status_list = json.loads(os.getenv("CLICKUP_STATUS_FILTER"))
+    for index, status in enumerate(status_list, start=1):
+        print(f"{index}. {status}")
+
+    update_input = input("Enter your choice: ").strip()
+
+    choice = int(update_input) - 1
+    if 0 <= choice < len(status_list):
+        selected_status = status_list[choice]
+        url = f"{CLICKUP_BASE_URL}/task/{task_id}"
+        payload = {"status": selected_status}
+        print(f"You selected: {selected_status}")
+        make_request(url, "put", payload)
+        update_google_sheet(site_name, selected_status, "Status")
+        print("Task status updated successfully!")
+    else:
+        print("Invalid choice. Please enter a number from the list.")

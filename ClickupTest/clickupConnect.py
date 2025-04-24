@@ -17,21 +17,35 @@ HEADERS = {
 
 
 def make_request(url, method="get", data=None):
-    """Handles making HTTP requests and error management."""
+    """Handles making HTTP requests and error management for GET, POST, and PUT methods."""
     try:
+        methods = {"get": requests.get, "post": requests.post, "put": requests.put}
+        method_func = methods.get(method.lower())
+
+        if method_func is None:
+            raise ValueError("Invalid HTTP method provided.")
+
         if method == "get":
-            response = requests.get(url, headers=HEADERS)
+            response = method_func(url, headers=HEADERS)
         else:
-            response = requests.post(url, headers=HEADERS, json=data)
-        response.raise_for_status()  # This will raise an error for non-200 status codes
-        return response.json() if response.content else None  # Extract JSON safely
+            response = method_func(url, headers=HEADERS, json=data)
+
+        response.raise_for_status()
+        return response.json() if response.content else None
+
     except requests.HTTPError as e:
         print(f"HTTP error occurred: {e.response.status_code} {e.response.reason}")
         if e.response.content:
-            print("Error details:", e.response.json())
+            try:
+                print("Error details:", e.response.json())
+            except ValueError:
+                print("Error reading error details, raw content:", e.response.text)
         return None
     except requests.RequestException as e:
         print(f"An error occurred: {e}")
+        return None
+    except ValueError as e:
+        print(f"A ValueError occurred: {e}")
         return None
 
 
