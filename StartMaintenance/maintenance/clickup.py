@@ -214,6 +214,36 @@ def list_lists(folder_id):
         return None
 
 
+# def list_sites_maintenance(list_id, assignee_ids=[USER]):
+#     """
+#     Fetches tasks from a specific ClickUp list filtered by assignee IDs and statuses.
+#     """
+#     try:
+#         status_filter = json.loads(os.getenv("CLICKUP_STATUS_FILTER", "[]"))
+#     except json.JSONDecodeError:
+#         print("Error decoding the CLICKUP_STATUS_FILTER. Please check its format.")
+#         return []
+
+#     statuses = "&".join(f"statuses[]={status}" for status in status_filter)
+#     assignees = "&".join(f"assignees[]={id}" for id in assignee_ids)
+#     url = f"{CLICKUP_BASE_URL}/list/{list_id}/task?{assignees}&{statuses}"
+
+#     response = make_request(url)
+#     if response and "tasks" in response:
+#         tasks = response["tasks"]
+#         if tasks:
+#             print(f"Tasks in List ID {list_id}:")
+#             for index, task in enumerate(tasks, start=1):  # Start numbering from 1
+#                 task_status = task.get("status", {}).get("status", "No status found")
+#                 print(f"{index}. {task['name']} (Status: {task_status})")
+#         else:
+#             print(f"No tasks found for List ID {list_id}.")
+#         return tasks
+#     else:
+#         print(f"Failed to fetch tasks for List ID {list_id}.")
+#         return []
+
+
 def list_sites_maintenance(list_id, assignee_ids=[USER]):
     """
     Fetches tasks from a specific ClickUp list filtered by assignee IDs and statuses.
@@ -235,7 +265,8 @@ def list_sites_maintenance(list_id, assignee_ids=[USER]):
             print(f"Tasks in List ID {list_id}:")
             for index, task in enumerate(tasks, start=1):  # Start numbering from 1
                 task_status = task.get("status", {}).get("status", "No status found")
-                print(f"{index}. {task['name']} (Status: {task_status})")
+                status_icon = "✅" if task_status == "ready for report" else "❌"
+                print(f"{index}. {task['name']} {status_icon} (Status: {task_status})")
         else:
             print(f"No tasks found for List ID {list_id}.")
         return tasks

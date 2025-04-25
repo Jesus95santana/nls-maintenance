@@ -300,8 +300,8 @@ def determine_background_color(data, column_name):
         # Numeric, treat as success (green)
         return {"red": 0.0, "green": 1.0, "blue": 0.0}
     else:
-        # Default to red (for unknown but non-critical values)
-        return {"red": 1.0, "green": 0.0, "blue": 0.0}
+        # Default to Yellow (for unknown but non-critical values)
+        return {"red": 1.0, "green": 1.0, "blue": 0.0}
 
 
 def apply_background_color(spreadsheet_id, cell_address, color):
