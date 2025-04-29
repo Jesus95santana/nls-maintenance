@@ -16,7 +16,7 @@ HEADERS = {
 }
 
 
-def make_request(url, method="get", data=None):
+def make_request(url, method="get", data=None, files=None):
     """Handles making HTTP requests and error management for GET, POST, and PUT methods."""
     try:
         methods = {"get": requests.get, "post": requests.post, "put": requests.put}
@@ -27,6 +27,10 @@ def make_request(url, method="get", data=None):
 
         if method == "get":
             response = method_func(url, headers=HEADERS)
+        elif files:
+            # Modify headers for multipart/form-data, let requests handle 'Content-Type'
+            multipart_headers = {key: value for key, value in HEADERS.items() if key.lower() != "content-type"}
+            response = method_func(url, headers=multipart_headers, files=files, data=data)
         else:
             response = method_func(url, headers=HEADERS, json=data)
 

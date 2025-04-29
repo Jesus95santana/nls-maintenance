@@ -1,11 +1,3 @@
-import os
-from dotenv import load_dotenv
-import requests
-import json
-import whois
-from urllib.parse import urlparse
-from datetime import datetime
-
 from StartMaintenance.maintenance.clickup import (
     list_folders,
     list_lists,
@@ -24,6 +16,8 @@ from StartMaintenance.maintenance.clickup import (
     date_email_subject_line,
     get_field_id_by_name,
     get_custom_field_value,
+    select_file_gui,
+    upload_file_to_clickup,
 )
 
 
@@ -126,8 +120,12 @@ def maintenance():
                         return
 
                     if update_input == "1":
-                        print("broken_links: not built")
-                        # broken_links()
+                        field_id = get_field_id_by_name(task, "Broken Links Report")
+                        file_path = select_file_gui()
+                        if file_path:
+                            upload_file_to_clickup(task_id, field_id, file_path)
+                        else:
+                            print("No file selected.")
 
                     elif update_input == "2":
                         field_id = get_field_id_by_name(task, "Date Completed")

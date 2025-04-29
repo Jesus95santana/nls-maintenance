@@ -5,6 +5,8 @@ import re
 from datetime import datetime
 import requests
 import whois
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
 from ClickupTest.clickupConnect import make_request, CLICKUP_BASE_URL
 
 from .google import update_google_sheet
@@ -212,36 +214,6 @@ def list_lists(folder_id):
     else:
         print("No lists found or there was an error fetching lists.")
         return None
-
-
-# def list_sites_maintenance(list_id, assignee_ids=[USER]):
-#     """
-#     Fetches tasks from a specific ClickUp list filtered by assignee IDs and statuses.
-#     """
-#     try:
-#         status_filter = json.loads(os.getenv("CLICKUP_STATUS_FILTER", "[]"))
-#     except json.JSONDecodeError:
-#         print("Error decoding the CLICKUP_STATUS_FILTER. Please check its format.")
-#         return []
-
-#     statuses = "&".join(f"statuses[]={status}" for status in status_filter)
-#     assignees = "&".join(f"assignees[]={id}" for id in assignee_ids)
-#     url = f"{CLICKUP_BASE_URL}/list/{list_id}/task?{assignees}&{statuses}"
-
-#     response = make_request(url)
-#     if response and "tasks" in response:
-#         tasks = response["tasks"]
-#         if tasks:
-#             print(f"Tasks in List ID {list_id}:")
-#             for index, task in enumerate(tasks, start=1):  # Start numbering from 1
-#                 task_status = task.get("status", {}).get("status", "No status found")
-#                 print(f"{index}. {task['name']} (Status: {task_status})")
-#         else:
-#             print(f"No tasks found for List ID {list_id}.")
-#         return tasks
-#     else:
-#         print(f"Failed to fetch tasks for List ID {list_id}.")
-#         return []
 
 
 def list_sites_maintenance(list_id, assignee_ids=[USER]):
@@ -518,7 +490,17 @@ def update_custom_field(task_id, field_id, value, value_type=None):
             value = f"{updated_text}"
         else:
             # Append the updated year if no year is found
-            value = f"{text}{updated_text}"
+            value = f"{text}\n{updated_text}"
+
+    elif value_type == "attachment":
+        url = f"{CLICKUP_BASE_URL}/task/{task_id}/attachment"
+        if not os.path.exists(value):
+            print(f"❌ File does not exist: {value}")
+            return
+
+        with open(value, "rb") as file_data:
+            files = {"attachment": (os.path.basename(value), file_data)}
+            response = make_request(url, "post", data=None, files=files)
 
     elif value_type == "slider":
         print("Updating Slider Note")
@@ -533,12 +515,12 @@ def update_custom_field(task_id, field_id, value, value_type=None):
             value = f"{updated_text}"
         else:
             # Append the updated year if no year is found
-            value = f"{text}{updated_text}"
+            value = f"{text}\n{updated_text}"
 
     elif value_type == "note":
         print("Adding Note to Clickup")
         text, updated_text = value
-        value = f"{text}{updated_text}"
+        value = f"{text}\n{updated_text}"
 
     elif value_type == "date":
         try:
@@ -555,6 +537,20 @@ def update_custom_field(task_id, field_id, value, value_type=None):
         print("Field updated successfully.")
     else:
         print("Failed to update field. Please try again later.")
+
+
+def select_file_gui():
+    """Open a file selection dialog and return the selected file path."""
+    root = Tk()
+    root.withdraw()  # Hide the main tkinter window
+    downloads_path = os.path.expanduser("~/Downloads")
+    file_path = askopenfilename(initialdir=downloads_path)
+    root.destroy()
+    return file_path
+
+
+def upload_file_to_clickup(task_id, field_id, file_path):
+    update_custom_field(task_id, field_id, file_path, "attachment")
 
 
 def update_plugins(site_name, task_id, field_id):
