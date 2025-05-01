@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime
 import json
+import difflib
 from GoogleTest.googleConnect import google_connect, SPREADSHEET_ID, TEMPLATE_SHEET_NAME
 
 load_dotenv()
@@ -51,6 +52,37 @@ def clone_sheet(title, source_sheet_name):
         return None
 
 
+def insert_and_fill_row(sheet_id, row_index, new_row_values):
+    """
+    Inserts a blank row at `row_index` (zero–based) in the sheet with ID sheet_id,
+    then writes new_row_values into columns A–D of that row.
+    """
+    requests = [
+        # 1) insert a blank row
+        {
+            "insertDimension": {
+                "range": {"sheetId": sheet_id, "dimension": "ROWS", "startIndex": row_index, "endIndex": row_index + 1},
+                "inheritFromBefore": False,
+            }
+        },
+        # 2) write the A–D values into that new row
+        {
+            "updateCells": {
+                "start": {
+                    "sheetId": sheet_id,
+                    "rowIndex": row_index,
+                    "columnIndex": 0,  # column A
+                },
+                "rows": [{"values": [{"userEnteredValue": {"stringValue": str(v)}} for v in new_row_values]}],
+                "fields": "userEnteredValue",
+            }
+        },
+    ]
+
+    body = {"requests": requests}
+    service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
+
+
 #
 def create_or_update_sheet(data):
     title = datetime.now().strftime("%B %Y")
@@ -79,31 +111,105 @@ def create_or_update_sheet(data):
             print(f"Failed to populate new sheet: {e}")
     else:
         print(f"Sheet already exists: {title}")
-        # Existing sheet logic to check and update changes
-        range_name = f"{title}!A1:D1000"  # Adjust range to fit data
-        changes = check_for_data_update(sheet_id, range_name, data)
-        if changes:
-            print("Data has changed. Here are the proposed changes:")
-            for row_index, old_row, new_row in changes:
-                print(f"Row {row_index + 1} changed from {old_row} to {new_row}")
 
-            confirm = input("Apply all changes? (y) yes / (n) no): ")
-            if confirm.lower() == "y":
-                for row_index, old_row, new_row in changes:
-                    row_range = f"{title}!A{row_index + 1}:D{row_index + 1}"
-                    body = {"values": [new_row]}
-                    service.spreadsheets().values().update(
-                        spreadsheetId=SPREADSHEET_ID, range=row_range, valueInputOption="USER_ENTERED", body=body
-                    ).execute()
-                    print(f"Updated row {row_index + 1}")
-                print("All changes have been applied.")
-                print("Applying conditional formatting...")
-                color_formatting(sheet_id, 3, title)  # Apply formatting
+        # 1) fetch old & new
+        old = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range=f"{title}!A1:D1000").execute().get("values", [])
+        new = data
 
-            else:
-                print("No changes have been applied.")
-        else:
+        # pad old rows so trailing blanks don’t trip you up
+        width = len(new[0])
+        old_rows = [r + [""] * (width - len(r)) for r in old]
+
+        # 2) compute diffs
+        diffs = compute_row_diffs(old_rows, new)
+        if not diffs:
             print("No changes detected, no update necessary.")
+            return
+
+        # split into deletes, inserts, replaces
+        deletes = [d for d in diffs if d[0] == "delete"]
+        inserts = [d for d in diffs if d[0] == "insert"]
+        replaces = [d for d in diffs if d[0] == "replace"]
+
+        # 3) summary
+        print("Data has changed:")
+        for _, old_slice, pos in deletes:
+            print(f"  → Delete {len(old_slice)} row(s) at {pos + 1}")
+        for _, pos, new_slice in inserts:
+            print(f"  → Insert {len(new_slice)} row(s) at {pos + 1}: {new_slice}")
+        for _, idx, old_row, new_row in replaces:
+            # Only show a replace if it’s really a status/name change,
+            # not a pure shift.
+            if old_row[2] == new_row[2] and old_row[3] != new_row[3]:
+                print(f"  → Replace status in row {idx + 1}: {old_row[3]} → {new_row[3]}")
+
+        # 4) confirm
+        if input("Apply these changes? (y/n): ").lower() != "y":
+            print("No changes applied.")
+            return
+
+        # 5a) delete rows first (in reverse order!)
+        for _, old_slice, pos in sorted(deletes, key=lambda d: d[2], reverse=True):
+            count = len(old_slice)
+            service.spreadsheets().batchUpdate(
+                spreadsheetId=SPREADSHEET_ID,
+                body={
+                    "requests": [
+                        {"deleteDimension": {"range": {"sheetId": sheet_id, "dimension": "ROWS", "startIndex": pos, "endIndex": pos + count}}}
+                    ]
+                },
+            ).execute()
+            print(f"Deleted {count} row(s) at {pos + 1}")
+
+        # 5b) insert new rows (in forward order)
+        for _, pos, new_slice in sorted(inserts, key=lambda d: d[1]):
+            for row in new_slice:
+                insert_and_fill_row(sheet_id, pos, row)
+            print(f"Inserted {len(new_slice)} row(s) at {pos + 1}")
+
+        # 5c) patch any real status-changes
+        for _, idx, old_row, new_row in replaces:
+            if old_row[2] == new_row[2] and old_row[3] != new_row[3]:
+                cell = f"{title}!D{idx + 1}"
+                service.spreadsheets().values().update(
+                    spreadsheetId=SPREADSHEET_ID, range=cell, valueInputOption="USER_ENTERED", body={"values": [[new_row[3]]]}
+                ).execute()
+                print(f"Updated status for '{new_row[2]}' in row {idx + 1}")
+
+        # 6) formatting
+        print("All changes have been applied.")
+        print("Applying conditional formatting…")
+        color_formatting(sheet_id, 3, title)
+
+
+def compute_row_diffs(old_rows, new_rows):
+    """
+    Returns a list of tuples:
+        ('insert',  old_index,  new_rows_slice)
+        ('delete', old_rows_slice, new_index)
+        ('replace', old_index, new_row)
+    """
+    # convert each row-list to a tuple so they become hashable
+    hashable_old = [tuple(r) for r in old_rows]
+    hashable_new = [tuple(r) for r in new_rows]
+    sm = difflib.SequenceMatcher(None, hashable_old, hashable_new)
+    diffs = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "insert":
+            # new_rows[j1:j2] were inserted at position i1
+            diffs.append(("insert", i1, new_rows[j1:j2]))
+        elif tag == "delete":
+            # old_rows[i1:i2] were deleted
+            diffs.append(("delete", old_rows[i1:i2], i1))
+        elif tag == "replace":
+            # rows i1..i2 replaced by j1..j2
+            # we’ll treat each replaced row as a separate diff
+            length = max(i2 - i1, j2 - j1)
+            for k in range(length):
+                old = old_rows[i1 + k] if i1 + k < i2 else None
+                new = new_rows[j1 + k] if j1 + k < j2 else None
+                diffs.append(("replace", i1 + k, old, new))
+    return diffs
 
 
 def check_for_data_update(sheet_id, range_name, new_data):
@@ -206,11 +312,11 @@ def google_list_formatter(raw_data):
             list_name = lst["name"]
             formatted_data.append([folder_name, list_name, "", ""])  # List type row
 
-            # Loop through each task within the list
-            for task in lst["tasks"]:
+            # sort the tasks by lower-cased name
+            for task in sorted(lst["tasks"], key=lambda t: t["name"].lower()):
                 task_name = task["name"]
                 status = task["status"]
-                formatted_data.append([folder_name, list_name, task_name, status])  # Task detail row
+                formatted_data.append([folder_name, list_name, task_name, status])
 
     return formatted_data
 
