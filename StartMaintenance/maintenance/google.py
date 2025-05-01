@@ -63,7 +63,7 @@ def create_or_update_sheet(data):
             print("Failed to create or retrieve the sheet ID.")
             return
         # Since the sheet is new, insert all data directly without checking for changes
-        range_name = f"{title}!A1:J{len(data)}"  # Ensure range covers all necessary columns and rows
+        range_name = f"{title}!A1:D{len(data)}"  # Ensure range covers all necessary columns and rows
         body = {"values": data}
         try:
             result = (
@@ -80,7 +80,7 @@ def create_or_update_sheet(data):
     else:
         print(f"Sheet already exists: {title}")
         # Existing sheet logic to check and update changes
-        range_name = f"{title}!A1:J{len(data)}"  # Adjust range to fit data
+        range_name = f"{title}!A1:D1000"  # Adjust range to fit data
         changes = check_for_data_update(sheet_id, range_name, data)
         if changes:
             print("Data has changed. Here are the proposed changes:")
@@ -90,7 +90,7 @@ def create_or_update_sheet(data):
             confirm = input("Apply all changes? (y) yes / (n) no): ")
             if confirm.lower() == "y":
                 for row_index, old_row, new_row in changes:
-                    row_range = f"{title}!A{row_index + 1}:J{row_index + 1}"
+                    row_range = f"{title}!A{row_index + 1}:D{row_index + 1}"
                     body = {"values": [new_row]}
                     service.spreadsheets().values().update(
                         spreadsheetId=SPREADSHEET_ID, range=row_range, valueInputOption="USER_ENTERED", body=body
@@ -129,6 +129,12 @@ def check_for_data_update(sheet_id, range_name, new_data):
         return []  # Return an empty list indicating potential need for updating all data due to an error
 
 
+def hex_to_rgb_norm(hex_color):
+    h = hex_color.lstrip("#")
+    r, g, b = (int(h[i : i + 2], 16) for i in (0, 2, 4))
+    return {"red": r / 255.0, "green": g / 255.0, "blue": b / 255.0}
+
+
 def color_formatting(sheet_id, status_column_index, sheet_title):
     # Assuming `CLICKUP_STATUS` contains a JSON string of statuses
     try:
@@ -138,11 +144,15 @@ def color_formatting(sheet_id, status_column_index, sheet_title):
         return
 
     # Defining colors for each status
+    PURPLE = hex_to_rgb_norm("#cb8ccb")
+    YELLOW = hex_to_rgb_norm("#ffff00")
+    CYAN = hex_to_rgb_norm("#00ffff")
+    GREEN = hex_to_rgb_norm("00ff00")
     status_colors = {
-        "complete": {"red": 0.0, "green": 1.0, "blue": 0.0},  # Green
-        status_list[1]: {"red": 0.0, "green": 0.0, "blue": 1.0},  # Blue
-        status_list[2]: {"red": 0.5, "green": 0.0, "blue": 0.5},  # Purple
-        status_list[3]: {"red": 1.0, "green": 1.0, "blue": 0.0},  # Yellow
+        "complete": GREEN,  # Green
+        status_list[0]: CYAN,  # Blue
+        status_list[1]: PURPLE,  # Purple
+        status_list[2]: YELLOW,  # Yellow
     }
 
     requests = []
@@ -184,9 +194,7 @@ def google_list_formatter(raw_data):
     :param raw_data: Nested list of dictionaries, detailing folders, their lists, and tasks.
     :return: List of lists, where each inner list is a row suitable for Google Sheets.
     """
-    formatted_data = [
-        ["Folder", "List", "Task Name", "Status", "Plugins Updated", "Footer 2025", "DNS Check", "Slider Rev Update", "Broken Links", "Notes"]
-    ]
+    formatted_data = [["Folder", "List", "Task Name", "Status"]]
 
     # Loop through each folder (e.g., Active Plans, Raincastle)
     for folder in raw_data:
