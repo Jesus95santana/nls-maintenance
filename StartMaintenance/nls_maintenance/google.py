@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 import json
 import difflib
-from GoogleTest.googleConnect import google_connect, SPREADSHEET_ID, TEMPLATE_SHEET_NAME
+from GoogleTest.googleConnect import google_connect, NLS_SPREADSHEET_ID, TEMPLATE_SHEET_NAME
 
 load_dotenv()
 
@@ -15,7 +15,7 @@ service = google_connect()
 
 def get_sheet_id_by_name(sheet_name):
     # Fetch the list of sheets in the spreadsheet
-    sheet_metadata = service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
+    sheet_metadata = service.spreadsheets().get(spreadsheetId=NLS_SPREADSHEET_ID).execute()
     sheets = sheet_metadata.get("sheets", "")
 
     # Search for the sheet ID based on the provided name
@@ -43,7 +43,7 @@ def clone_sheet(title, source_sheet_name):
         ]
     }
     try:
-        response = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
+        response = service.spreadsheets().batchUpdate(spreadsheetId=NLS_SPREADSHEET_ID, body=body).execute()
         new_sheet_id = response["replies"][0]["duplicateSheet"]["properties"]["sheetId"]
         print(f"Cloned sheet with title: {title}, Sheet ID: {new_sheet_id}")
         return new_sheet_id
@@ -80,11 +80,11 @@ def insert_and_fill_row(sheet_id, row_index, new_row_values):
     ]
 
     body = {"requests": requests}
-    service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
+    service.spreadsheets().batchUpdate(spreadsheetId=NLS_SPREADSHEET_ID, body=body).execute()
 
 
 #
-def create_or_update_sheet(data):
+def create_or_update_nls_sheet(data):
     title = datetime.now().strftime("%B %Y")
     sheet_id = get_sheet_id_by_name(title)
 
@@ -101,7 +101,7 @@ def create_or_update_sheet(data):
             result = (
                 service.spreadsheets()
                 .values()
-                .update(spreadsheetId=SPREADSHEET_ID, range=range_name, valueInputOption="USER_ENTERED", body=body)
+                .update(spreadsheetId=NLS_SPREADSHEET_ID, range=range_name, valueInputOption="USER_ENTERED", body=body)
                 .execute()
             )
             print("New sheet populated with initial data.")
@@ -113,7 +113,7 @@ def create_or_update_sheet(data):
         print(f"Sheet already exists: {title}")
 
         # 1) fetch old & new
-        old = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range=f"{title}!A1:D1000").execute().get("values", [])
+        old = service.spreadsheets().values().get(spreadsheetId=NLS_SPREADSHEET_ID, range=f"{title}!A1:D1000").execute().get("values", [])
         new = data
 
         # pad old rows so trailing blanks don’t trip you up
@@ -152,7 +152,7 @@ def create_or_update_sheet(data):
         for _, old_slice, pos in sorted(deletes, key=lambda d: d[2], reverse=True):
             count = len(old_slice)
             service.spreadsheets().batchUpdate(
-                spreadsheetId=SPREADSHEET_ID,
+                spreadsheetId=NLS_SPREADSHEET_ID,
                 body={
                     "requests": [
                         {"deleteDimension": {"range": {"sheetId": sheet_id, "dimension": "ROWS", "startIndex": pos, "endIndex": pos + count}}}
@@ -172,7 +172,7 @@ def create_or_update_sheet(data):
             if old_row[2] == new_row[2] and old_row[3] != new_row[3]:
                 cell = f"{title}!D{idx + 1}"
                 service.spreadsheets().values().update(
-                    spreadsheetId=SPREADSHEET_ID, range=cell, valueInputOption="USER_ENTERED", body={"values": [[new_row[3]]]}
+                    spreadsheetId=NLS_SPREADSHEET_ID, range=cell, valueInputOption="USER_ENTERED", body={"values": [[new_row[3]]]}
                 ).execute()
                 print(f"Updated status for '{new_row[2]}' in row {idx + 1}")
 
@@ -214,7 +214,7 @@ def compute_row_diffs(old_rows, new_rows):
 
 def check_for_data_update(sheet_id, range_name, new_data):
     try:
-        result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range=range_name).execute()
+        result = service.spreadsheets().values().get(spreadsheetId=NLS_SPREADSHEET_ID, range=range_name).execute()
         existing_data = result.get("values", [])
         changed_rows = []
 
@@ -288,7 +288,7 @@ def color_formatting(sheet_id, status_column_index, sheet_title):
 
     # Send batchUpdate to apply all formatting rules
     body = {"requests": requests}
-    response = service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
+    response = service.spreadsheets().batchUpdate(spreadsheetId=NLS_SPREADSHEET_ID, body=body).execute()
     # print(f"Conditional formatting applied: {response}")
 
 
@@ -341,7 +341,7 @@ def update_google_sheet(site_name, data, column_name):
 
     range_name = f"{title}!A1:Z1000"
     try:
-        result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range=range_name).execute()
+        result = service.spreadsheets().values().get(spreadsheetId=NLS_SPREADSHEET_ID, range=range_name).execute()
         values = result.get("values", [])
 
         if not values:
@@ -375,12 +375,12 @@ def update_google_sheet(site_name, data, column_name):
         cell_address = f"{get_column_letter(column_index)}{row_number}"
         body = {"values": [[data]], "range": f"{title}!{cell_address}", "majorDimension": "ROWS"}
         service.spreadsheets().values().update(
-            spreadsheetId=SPREADSHEET_ID, range=f"{title}!{cell_address}", valueInputOption="USER_ENTERED", body=body
+            spreadsheetId=NLS_SPREADSHEET_ID, range=f"{title}!{cell_address}", valueInputOption="USER_ENTERED", body=body
         ).execute()
 
         # Apply color formatting based on the data
         color = determine_background_color(data, column_name)
-        apply_background_color(SPREADSHEET_ID, cell_address, color)
+        apply_background_color(NLS_SPREADSHEET_ID, cell_address, color)
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -418,7 +418,7 @@ def determine_background_color(data, column_name):
         return {"red": 1.0, "green": 1.0, "blue": 0.0}
 
 
-def apply_background_color(spreadsheet_id, cell_address, color):
+def apply_background_color(NLS_SPREADSHEET_ID, cell_address, color):
     service = google_connect()
     title = datetime.now().strftime("%B %Y")
     sheet_id = get_sheet_id_by_name(title)
@@ -450,7 +450,7 @@ def apply_background_color(spreadsheet_id, cell_address, color):
     body = {"requests": requests}
 
     # Send the request to the Sheets API
-    response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
+    response = service.spreadsheets().batchUpdate(spreadsheetId=NLS_SPREADSHEET_ID, body=body).execute()
     print("Background color applied:", response)
 
 

@@ -8,7 +8,8 @@ from StartMaintenance.maintenance.google import create_or_update_sheet, google_l
 from StartMaintenance.maintenance.clickup import fetch_shared_folders, fetch_all_tasks_by_folder, return_fetch_all_tasks_by_folder
 from StartMaintenance.maintenance.maintenance import maintenance
 from StartMaintenance.nls_maintenance.nls_maintenance import nls_maintenance
-from StartMaintenance.nls_maintenance.clickup import fetch_all_nls_tasks_by_folder
+from StartMaintenance.nls_maintenance.clickup import fetch_all_nls_tasks_by_folder, return_fetch_all_nls_tasks_by_folder
+from StartMaintenance.nls_maintenance.google import create_or_update_nls_sheet
 
 load_dotenv()
 
@@ -102,15 +103,12 @@ def main_menu():
 
                 # Menu 4.1 Create/Update New Spreadsheet
                 if user_input == "1":
-                    print("Not yet functional")
                     # Fetch all tasks from ClickUp
-                    # raw_data = return_fetch_all_tasks_by_folder(NLS_TEAM)
-
+                    raw_data = return_fetch_all_nls_tasks_by_folder(SPACE_ID)
                     # Format the fetched data for Google Sheets
-                    # formatted_data = google_list_formatter(raw_data)
-
+                    formatted_data = google_list_formatter(raw_data)
                     # Create or update the Google Sheet with formatted data
-                    # create_or_update_sheet(formatted_data)
+                    create_or_update_nls_sheet(formatted_data)
 
                 # Menu 4.2 List All Sites + Status
                 elif user_input == "2":

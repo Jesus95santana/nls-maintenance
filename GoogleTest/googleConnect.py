@@ -9,6 +9,7 @@ load_dotenv()
 # Load environment variables
 SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_KEY_PATH")
 SPREADSHEET_ID = os.getenv("GOOGLE_SHEET_ID")
+NLS_SPREADSHEET_ID = os.getenv("NLS_GOOGLE_SHEET_ID")
 SHEET_NAME = os.getenv("GOOGLE_SHEET_NAME", "Sheet1")  # Default if not provided
 TEMPLATE_SHEET_NAME = os.getenv("GOOGLE_SHEET_TEMPLATE")  # This is the name of the tab to clone
 
