@@ -1,0 +1,194 @@
+{
+  "folders": [
+    {
+      "id": "90136846171",
+      "name": "Siteground",
+      "orderindex": 0,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "90135129903",
+        "name": "NLS Maintenance"
+      },
+      "task_count": "9",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "901311379688",
+          "name": "Maintenance Plan",
+          "orderindex": 0,
+          "content": "",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 9,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "90135129903",
+            "name": "NLS Maintenance",
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p90135129903_DgbVOgi3",
+              "status": "Open",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_aJgHPCug",
+              "status": "due this month",
+              "orderindex": 1,
+              "color": "#b660e0",
+              "type": "custom",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_ET3gxVss",
+              "status": "canceled plan",
+              "orderindex": 2,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_E1i02Ohu",
+              "status": "on hold",
+              "orderindex": 3,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_wMfQrH9g",
+              "status": "live complete",
+              "orderindex": 4,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_ktIdysW9",
+              "status": "staging complete",
+              "orderindex": 5,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_RAZsmj4i",
+              "status": "completed",
+              "orderindex": 6,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_90135129903"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "permission_level": "create"
+    },
+    {
+      "id": "90136846244",
+      "name": "WPEngine",
+      "orderindex": 1,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "90135129903",
+        "name": "NLS Maintenance"
+      },
+      "task_count": "3",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "901311379716",
+          "name": "Maintenance Plan",
+          "orderindex": 0,
+          "content": "",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 3,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "90135129903",
+            "name": "NLS Maintenance",
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p90135129903_DgbVOgi3",
+              "status": "Open",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_aJgHPCug",
+              "status": "due this month",
+              "orderindex": 1,
+              "color": "#b660e0",
+              "type": "custom",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_ET3gxVss",
+              "status": "canceled plan",
+              "orderindex": 2,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_E1i02Ohu",
+              "status": "on hold",
+              "orderindex": 3,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_wMfQrH9g",
+              "status": "live complete",
+              "orderindex": 4,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_ktIdysW9",
+              "status": "staging complete",
+              "orderindex": 5,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_90135129903"
+            },
+            {
+              "id": "p90135129903_RAZsmj4i",
+              "status": "completed",
+              "orderindex": 6,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_90135129903"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "permission_level": "create"
+    }
+  ]
+}

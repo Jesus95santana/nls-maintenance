@@ -18,6 +18,7 @@ pip install python-whois
 Once the repo is cloned make sure to have the following available
 
 - Clickup API Token (pk_XXXXXXXX)
+- Clickup Personal Space ID (found at end of url of clickup space -> v/l/s/00000)
 - Google API JSON Key (place this in Keys Directory)
 - Google Sheet ID (located in url of the google-sheet)
   - Note: make sure Sheet is Sharable via link

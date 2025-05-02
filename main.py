@@ -4,15 +4,17 @@ from dotenv import load_dotenv
 
 from ClickupTest.clickupConnect import test_clickup_connection
 from GoogleTest.googleConnect import test_google_sheet_connection
-from StartMaintenance.nls_maintenance.nls_maintenance import nls_maintenance
 from StartMaintenance.maintenance.google import create_or_update_sheet, google_list_formatter
 from StartMaintenance.maintenance.clickup import fetch_shared_folders, fetch_all_tasks_by_folder, return_fetch_all_tasks_by_folder
 from StartMaintenance.maintenance.maintenance import maintenance
+from StartMaintenance.nls_maintenance.nls_maintenance import nls_maintenance
+from StartMaintenance.nls_maintenance.clickup import fetch_all_nls_tasks_by_folder
 
 load_dotenv()
 
 # Constants
 TOMO360_MONTHLY = os.getenv("CLICKUP_T3_MONTHLY_ID")
+SPACE_ID = os.getenv("CLICKUP_NLS_SPACE_ID")
 TEAM = os.getenv("CLICKUP_TEAM_ID")
 USER = os.getenv("CLICKUP_USER_ID")
 
@@ -92,13 +94,38 @@ def main_menu():
             # Menu 2.2 NLS Maintenance
             elif user_input == "2":
                 # Menu 4
-                nls_maintenance()
-                print("1: Create Sheet for Current Month Maintenance from Template")
+                print("1: Create/Update Google Sheet")
+                print("2: List Sites that are assigned")
                 print("3: Execute Maintenance")
                 print("4: Exit Program")
                 user_input = input("Choose the type of maintenance to work on: ").strip()
-            else:
-                print("Invalid input. Restarting...")
+
+                # Menu 4.1 Create/Update New Spreadsheet
+                if user_input == "1":
+                    print("Not yet functional")
+                    # Fetch all tasks from ClickUp
+                    # raw_data = return_fetch_all_tasks_by_folder(NLS_TEAM)
+
+                    # Format the fetched data for Google Sheets
+                    # formatted_data = google_list_formatter(raw_data)
+
+                    # Create or update the Google Sheet with formatted data
+                    # create_or_update_sheet(formatted_data)
+
+                # Menu 4.2 List All Sites + Status
+                elif user_input == "2":
+                    fetch_all_nls_tasks_by_folder(SPACE_ID)
+
+                # Menu 4.3 Executing Maintenance
+                elif user_input == "3":
+                    print("Not yet functional")
+                    # nls_maintenance()
+
+                # Exit
+                elif user_input == "4":
+                    print("Exiting the program.")
+                else:
+                    print("Invalid input. Restarting...")
         else:
             logging.warning("Invalid input. Please enter 1, 2, 3, or 'exit'.")
 
