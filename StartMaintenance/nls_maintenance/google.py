@@ -254,11 +254,14 @@ def color_formatting(sheet_id, status_column_index, sheet_title):
     YELLOW = hex_to_rgb_norm("#ffff00")
     CYAN = hex_to_rgb_norm("#00ffff")
     GREEN = hex_to_rgb_norm("00ff00")
+    RED = hex_to_rgb_norm("ea4335")
     status_colors = {
         "complete": GREEN,  # Green
         status_list[0]: CYAN,  # Blue
         status_list[1]: PURPLE,  # Purple
         status_list[2]: YELLOW,  # Yellow
+        status_list[3]: CYAN,
+        status_list[-1]: RED,
     }
 
     requests = []
