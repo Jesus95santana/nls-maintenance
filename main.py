@@ -1,14 +1,14 @@
 import os
 import logging
+import json
 from dotenv import load_dotenv
 
 from ClickupTest.clickupConnect import test_clickup_connection
-from GoogleTest.googleConnect import test_google_sheet_connection
+from GoogleTest.googleConnect import test_google_sheet_connection, make_nls_request
 from StartMaintenance.maintenance.google import create_or_update_sheet, google_list_formatter
 from StartMaintenance.maintenance.clickup import fetch_shared_folders, fetch_all_tasks_by_folder, return_fetch_all_tasks_by_folder
 from StartMaintenance.maintenance.maintenance import maintenance
 from StartMaintenance.nls_maintenance.nls_maintenance import nls_maintenance
-from StartMaintenance.nls_maintenance.clickup import fetch_all_nls_tasks_by_folder, return_fetch_all_nls_tasks_by_folder
 from StartMaintenance.nls_maintenance.google import create_or_update_nls_sheet
 
 load_dotenv()
@@ -18,6 +18,8 @@ TOMO360_MONTHLY = os.getenv("CLICKUP_T3_MONTHLY_ID")
 SPACE_ID = os.getenv("CLICKUP_NLS_SPACE_ID")
 TEAM = os.getenv("CLICKUP_TEAM_ID")
 USER = os.getenv("CLICKUP_USER_ID")
+
+SHEET_NAME = os.getenv("GOOGLE_SHEET_NAME", "Sheet1")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -103,16 +105,21 @@ def main_menu():
 
                 # Menu 4.1 Create/Update New Spreadsheet
                 if user_input == "1":
+                    print("Not yet functional")
                     # Fetch all tasks from ClickUp
-                    raw_data = return_fetch_all_nls_tasks_by_folder(SPACE_ID)
+                    # raw_data = return_fetch_all_nls_tasks_by_folder(SPACE_ID)
                     # Format the fetched data for Google Sheets
-                    formatted_data = google_list_formatter(raw_data)
+                    # formatted_data = google_list_formatter(raw_data)
                     # Create or update the Google Sheet with formatted data
-                    create_or_update_nls_sheet(formatted_data)
+                    # create_or_update_nls_sheet(formatted_data)
 
                 # Menu 4.2 List All Sites + Status
                 elif user_input == "2":
-                    fetch_all_nls_tasks_by_folder(SPACE_ID)
+                    print("Not yet functional")
+                    full_range = f"'{SHEET_NAME}'!A1:I"
+                    data = make_nls_request(full_range)
+                    print(json.dumps(data, indent=2))
+                    # fetch_all_nls_tasks_by_folder(SPACE_ID)
 
                 # Menu 4.3 Executing Maintenance
                 elif user_input == "3":

@@ -8,7 +8,7 @@ from GoogleTest.googleConnect import google_connect, NLS_SPREADSHEET_ID, TEMPLAT
 load_dotenv()
 
 # Constants
-CLICKUP_STATUS = os.getenv("CLICKUP_STATUS_FILTER")
+NLS_GOOGLE_STATUS = os.getenv("NLS_GOOGLE_STATUS_FILTER")
 
 service = google_connect()
 
@@ -242,11 +242,11 @@ def hex_to_rgb_norm(hex_color):
 
 
 def color_formatting(sheet_id, status_column_index, sheet_title):
-    # Assuming `CLICKUP_STATUS` contains a JSON string of statuses
+    # Assuming `NLS_GOOGLE_STATUS` contains a JSON string of statuses
     try:
-        status_list = json.loads(CLICKUP_STATUS)
+        status_list = json.loads(NLS_GOOGLE_STATUS)
     except json.JSONDecodeError:
-        print("Failed to decode CLICKUP_STATUS_FILTER. Please check its format.")
+        print("Failed to decode NLS_GOOGLE_STATUS_FILTER. Please check its format.")
         return
 
     # Defining colors for each status
@@ -255,12 +255,14 @@ def color_formatting(sheet_id, status_column_index, sheet_title):
     CYAN = hex_to_rgb_norm("#00ffff")
     GREEN = hex_to_rgb_norm("00ff00")
     RED = hex_to_rgb_norm("ea4335")
+    CORNBLUE = hex_to_rgb_norm("4285f4")
     status_colors = {
         "complete": GREEN,  # Green
         status_list[0]: CYAN,  # Blue
         status_list[1]: PURPLE,  # Purple
         status_list[2]: YELLOW,  # Yellow
         status_list[3]: CYAN,
+        status_list[4]: CORNBLUE,
         status_list[-1]: RED,
     }
 

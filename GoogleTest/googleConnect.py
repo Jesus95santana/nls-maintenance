@@ -23,6 +23,20 @@ def google_connect():
     return service
 
 
+def make_nls_request(range_notation: str) -> dict:
+    """
+    Fetch the given range from the sheet and return the raw JSON response.
+    Example range_notation: "'Sheet1'!A1:I"
+    """
+    service = google_connect()
+    sheet = service.spreadsheets()
+    try:
+        return sheet.values().get(spreadsheetId=NLS_SPREADSHEET_ID, range=range_notation).execute()
+    except HttpError as e:
+        print("❌ API error on make_request:", e)
+        return {}
+
+
 def test_google_sheet_connection():
     try:
         credentials = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
