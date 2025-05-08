@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 import json
 import difflib
-from GoogleTest.googleConnect import google_connect, NLS_SPREADSHEET_ID, TEMPLATE_SHEET_NAME
+from GoogleTest.googleConnect import google_connect, make_nls_request, NLS_SPREADSHEET_ID, TEMPLATE_SHEET_NAME
 
 load_dotenv()
 
@@ -11,6 +11,55 @@ load_dotenv()
 NLS_GOOGLE_STATUS = os.getenv("NLS_GOOGLE_STATUS_FILTER")
 
 service = google_connect()
+
+#
+#
+#
+# Listing & Displaying
+#
+#
+#
+
+
+def return_list_all_sites(values: list[list[str]]) -> str:
+    """
+    Given the `values` list from Sheets API (first row = headers),
+    produce a text outline of:
+
+    Folder: {Folder_Name}
+      List: {List_Name}
+          - {Site_Name} ({Status})
+    """
+    lines = []
+    current_folder = None
+    current_list = None
+
+    # skip header
+    for row in values[1:]:
+        # new Folder row: only A is filled
+        if len(row) >= 1 and row[0] and len(row) == 1:
+            current_folder = row[0]
+            lines.append(f"Folder: {current_folder}")
+            current_list = None
+            continue
+
+        # new List row: A and B filled, but no site
+        if len(row) >= 2 and row[1] and len(row) == 2:
+            current_list = row[1]
+            lines.append(f"  List: {current_list}")
+            continue
+
+        # site row: A, B, C at minimum; status in D if present
+        if len(row) >= 3:
+            site = row[2]
+            status = row[3] if len(row) >= 4 else ""
+            lines.append(f"      - {site} ({status})")
+            continue
+
+        # anything else (empty rows) we skip
+    output = "\n".join(lines)
+    print(output)
+    return output
 
 
 def get_sheet_id_by_name(sheet_name):
