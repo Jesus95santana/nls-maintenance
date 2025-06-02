@@ -9,7 +9,7 @@ from StartMaintenance.maintenance.google import create_or_update_sheet, google_l
 from StartMaintenance.maintenance.clickup import fetch_shared_folders, fetch_all_tasks_by_folder, return_fetch_all_tasks_by_folder
 from StartMaintenance.maintenance.maintenance import maintenance
 from StartMaintenance.nls_maintenance.nls_maintenance import nls_maintenance
-from StartMaintenance.nls_maintenance.google import create_or_update_nls_sheet, return_list_all_sites
+from StartMaintenance.nls_maintenance.google import create_nls_sheet, return_list_all_sites
 
 load_dotenv()
 
@@ -18,6 +18,8 @@ TOMO360_MONTHLY = os.getenv("CLICKUP_T3_MONTHLY_ID")
 SPACE_ID = os.getenv("CLICKUP_NLS_SPACE_ID")
 TEAM = os.getenv("CLICKUP_TEAM_ID")
 USER = os.getenv("CLICKUP_USER_ID")
+
+COLUMNS = json.loads(os.getenv("COLUMNS_CLONE", "[]"))
 
 google_sheet_range = f"'{SHEET_NAME}'!A1:I"
 
@@ -105,7 +107,7 @@ def main_menu():
 
                 # Menu 4.1 Create/Update New Spreadsheet
                 if user_input == "1":
-                    print("Not yet functional")
+                    create_nls_sheet(COLUMNS)
                     # Fetch all tasks from ClickUp
                     # raw_data = return_fetch_all_nls_tasks_by_folder(SPACE_ID)
                     # Format the fetched data for Google Sheets

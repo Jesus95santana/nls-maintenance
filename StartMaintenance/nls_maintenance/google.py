@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import difflib
 from GoogleTest.googleConnect import google_connect, make_nls_request, NLS_SPREADSHEET_ID, TEMPLATE_SHEET_NAME
@@ -74,6 +74,17 @@ def get_sheet_id_by_name(sheet_name):
     return None
 
 
+def get_previous_month_title() -> str:
+    """
+    Returns a string like "May 2025" for the month prior to today.
+    """
+    today = datetime.now()
+    # Move to the first of this month, then subtract one day → last day of prev month
+    first_of_this_month = today.replace(day=1)
+    last_of_prev_month = first_of_this_month - timedelta(days=1)
+    return last_of_prev_month.strftime("%B %Y")
+
+
 def clone_sheet(title, source_sheet_name):
     source_sheet_id = get_sheet_id_by_name(source_sheet_name)
     if source_sheet_id is None:
@@ -133,102 +144,122 @@ def insert_and_fill_row(sheet_id, row_index, new_row_values):
 
 
 #
-def create_or_update_nls_sheet(data):
-    title = datetime.now().strftime("%B %Y")
-    sheet_id = get_sheet_id_by_name(title)
+def create_nls_sheet(columns_to_clone: list[str]) -> int | None:
+    """
+    Ensure that a sheet for the current month exists. If it does not:
+      1. Duplicate your TEMPLATE_SHEET_NAME → current_month_title.
+      2. If a previous-month sheet exists, fetch its data and copy ONLY the columns
+         in `columns_to_clone` into the new sheet (leaving all other columns blank).
 
-    if sheet_id is None:
-        print(f"Sheet does not exist, creating new sheet: {title}")
-        sheet_id = clone_sheet(title, TEMPLATE_SHEET_NAME)
-        if sheet_id is None:
-            print("Failed to create or retrieve the sheet ID.")
-            return
-        # Since the sheet is new, insert all data directly without checking for changes
-        range_name = f"{title}!A1:D{len(data)}"  # Ensure range covers all necessary columns and rows
-        body = {"values": data}
-        try:
-            result = (
-                service.spreadsheets()
-                .values()
-                .update(spreadsheetId=NLS_SPREADSHEET_ID, range=range_name, valueInputOption="USER_ENTERED", body=body)
-                .execute()
-            )
-            print("New sheet populated with initial data.")
-            print("Applying conditional formatting...")
-            color_formatting(sheet_id, 3, title)  # Apply formatting
-        except Exception as e:
-            print(f"Failed to populate new sheet: {e}")
-    else:
-        print(f"Sheet already exists: {title}")
+    Returns:
+      - The sheetId of the existing or newly created sheet on success,
+      - None if we failed to create/get it.
+    """
+    # 1) Determine this month’s and last month’s titles
+    current_title = datetime.now().strftime("%B %Y")
+    prev_title = get_previous_month_title()
 
-        # 1) fetch old & new
-        old = service.spreadsheets().values().get(spreadsheetId=NLS_SPREADSHEET_ID, range=f"{title}!A1:D1000").execute().get("values", [])
-        new = data
+    # 2) If “current month” already exists, just return its ID:
+    existing = get_sheet_id_by_name(current_title)
+    if existing is not None:
+        print(f"🔍 Sheet '{current_title}' already exists (ID={existing}).")
+        return existing
 
-        # pad old rows so trailing blanks don’t trip you up
-        width = len(new[0])
-        old_rows = [r + [""] * (width - len(r)) for r in old]
+    # 3) Duplicate the TEMPLATE sheet → new sheet called “current_title”
+    print(f"✂️  Creating new sheet by cloning template: '{TEMPLATE_SHEET_NAME}' → '{current_title}'")
+    new_sheet_id = clone_sheet(current_title, TEMPLATE_SHEET_NAME)
+    if new_sheet_id is None:
+        print("❌ Could not duplicate the template sheet. Aborting.")
+        return None
 
-        # 2) compute diffs
-        diffs = compute_row_diffs(old_rows, new)
-        if not diffs:
-            print("No changes detected, no update necessary.")
-            return
+    # 4) If last month’s sheet exists, pull its values and copy only desired columns:
+    prev_id = get_sheet_id_by_name(prev_title)
+    if prev_id is None:
+        print(f"ℹ️ No sheet named '{prev_title}' found. Leaving '{current_title}' with just the template headers.")
+        return new_sheet_id
 
-        # split into deletes, inserts, replaces
-        deletes = [d for d in diffs if d[0] == "delete"]
-        inserts = [d for d in diffs if d[0] == "insert"]
-        replaces = [d for d in diffs if d[0] == "replace"]
+    # 5) Read ALL values from last month’s sheet:
+    #    We assume at most, say, columns A→Z (you can adjust the range if you have more columns).
+    prev_range = f"'{prev_title}'!A1:Z1000"
+    prev_result = service.spreadsheets().values().get(spreadsheetId=NLS_SPREADSHEET_ID, range=prev_range).execute()
+    prev_values = prev_result.get("values", [])
+    if not prev_values:
+        print(f"⚠️ '{prev_title}' is empty. No data to copy.")
+        return new_sheet_id
 
-        # 3) summary
-        print("Data has changed:")
-        for _, old_slice, pos in deletes:
-            print(f"  → Delete {len(old_slice)} row(s) at {pos + 1}")
-        for _, pos, new_slice in inserts:
-            print(f"  → Insert {len(new_slice)} row(s) at {pos + 1}: {new_slice}")
-        for _, idx, old_row, new_row in replaces:
-            # Only show a replace if it’s really a status/name change,
-            # not a pure shift.
-            if old_row[2] == new_row[2] and old_row[3] != new_row[3]:
-                print(f"  → Replace status in row {idx + 1}: {old_row[3]} → {new_row[3]}")
+    # 6) Determine which column-indices in row 1 we want to copy:
+    header_row = prev_values[0]
+    # Build a mapping: header name → its zero‐based index in prev sheet
+    header_to_index = {h: i for i, h in enumerate(header_row)}
 
-        # 4) confirm
-        if input("Apply these changes? (y/n): ").lower() != "y":
-            print("No changes applied.")
-            return
+    # Make a list of zero‐based indices of columns we want to clone. If a column in
+    # columns_to_clone doesn’t appear in header, we’ll skip it (but still leave that column blank).
+    cols_indices: list[int] = []
+    for col_name in columns_to_clone:
+        if col_name in header_to_index:
+            cols_indices.append(header_to_index[col_name])
+        else:
+            print(f"⚠️ Column '{col_name}' not found in '{prev_title}' header; skipping it.")
 
-        # 5a) delete rows first (in reverse order!)
-        for _, old_slice, pos in sorted(deletes, key=lambda d: d[2], reverse=True):
-            count = len(old_slice)
-            service.spreadsheets().batchUpdate(
-                spreadsheetId=NLS_SPREADSHEET_ID,
-                body={
-                    "requests": [
-                        {"deleteDimension": {"range": {"sheetId": sheet_id, "dimension": "ROWS", "startIndex": pos, "endIndex": pos + count}}}
-                    ]
-                },
-            ).execute()
-            print(f"Deleted {count} row(s) at {pos + 1}")
+    if not cols_indices:
+        print("⚠️ None of the requested columns were found in the previous sheet. Nothing to copy.")
+        return new_sheet_id
 
-        # 5b) insert new rows (in forward order)
-        for _, pos, new_slice in sorted(inserts, key=lambda d: d[1]):
-            for row in new_slice:
-                insert_and_fill_row(sheet_id, pos, row)
-            print(f"Inserted {len(new_slice)} row(s) at {pos + 1}")
+    # 7) Build a new “partial” data‐array for ALL rows of last month—but only in the chosen columns.
+    #    We will preserve the full header, but for data‐rows we blank out everything except the chosen columns.
+    max_cols = len(header_row)
+    new_data: list[list[str]] = []
 
-        # 5c) patch any real status-changes
-        for _, idx, old_row, new_row in replaces:
-            if old_row[2] == new_row[2] and old_row[3] != new_row[3]:
-                cell = f"{title}!D{idx + 1}"
-                service.spreadsheets().values().update(
-                    spreadsheetId=NLS_SPREADSHEET_ID, range=cell, valueInputOption="USER_ENTERED", body={"values": [[new_row[3]]]}
-                ).execute()
-                print(f"Updated status for '{new_row[2]}' in row {idx + 1}")
+    # Row 1 in the new sheet should be exactly the same header as template (which we assume matches prev header),
+    # so let’s copy header_row into new_data[0]:
+    new_data.append(header_row)
 
-        # 6) formatting
-        print("All changes have been applied.")
-        print("Applying conditional formatting…")
-        color_formatting(sheet_id, 3, title)
+    # For rows 2…N in prev_values, we copy only chosen columns; other columns become "".
+    for old_row in prev_values[1:]:
+        # Pad old_row to the full width so indexing doesn’t break:
+        padded_old = old_row + [""] * (max_cols - len(old_row))
+
+        # Re‐build a new row of length=max_cols:
+        new_row = []
+        for col_idx in range(max_cols):
+            if col_idx in cols_indices:
+                new_row.append(padded_old[col_idx])
+            else:
+                new_row.append("")  # leave blank
+        new_data.append(new_row)
+
+    # 8) Write new_data into the newly created sheet (current_title).
+    #    We need a range cover from A1 to however many rows/columns we have.
+    num_rows = len(new_data)
+    num_cols = max_cols
+
+    # Convert num_cols to column letter. E.g. 1 → A, 2 → B, … 26→Z, 27→AA
+    def _column_letter(n: int) -> str:
+        result = ""
+        while n > 0:
+            n, rem = divmod(n - 1, 26)
+            result = chr(65 + rem) + result
+        return result
+
+    last_col_letter = _column_letter(num_cols)  # e.g. “I” if max_cols==9
+
+    write_range = f"'{current_title}'!A1:{last_col_letter}{num_rows}"
+    body = {"values": new_data}
+
+    service.spreadsheets().values().update(
+        spreadsheetId=NLS_SPREADSHEET_ID,
+        range=write_range,
+        valueInputOption="USER_ENTERED",
+        body=body,
+    ).execute()
+
+    print(f"✅ Created '{current_title}' (sheetId={new_sheet_id}) and copied columns {columns_to_clone} from '{prev_title}'.")
+    return new_sheet_id
+
+    # 6) formatting
+    # print("All changes have been applied.")
+    # print("Applying conditional formatting…")
+    # color_formatting(sheet_id, 3, title)
 
 
 def compute_row_diffs(old_rows, new_rows):
